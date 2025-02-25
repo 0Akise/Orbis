@@ -1,0 +1,26 @@
+BasedOnStyle: Google
+ColumnLimit: 0
+Language: Cpp
+
+UseTab: Never
+TabWidth: 4
+IndentWidth: 4
+ContinuationIndentWidth: 4
+
+NamespaceIndentation: All
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+PackConstructorInitializers: CurrentLine
+BraceWrapping:
+    BeforeInitializerList: true
+AllowAllArgumentsOnNextLine: false
+BinPackArguments: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+
+IncludeBlocks: Preserve
+
+FixNamespaceComments: false
+BreakInheritanceList: AfterColon
