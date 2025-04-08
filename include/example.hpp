@@ -18,7 +18,9 @@ namespace OrbisExample {
             }
         }
     };
+}
 
+namespace OrbisExample {
     class Program {
     private:
         struct M {

@@ -1,140 +1,137 @@
 #pragma once
 
+#include <iostream>
+#include <memory>
+#include <vector>
+
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "interface.hpp"
+#include "component.hpp"
 #include "sfml/shapes.hpp"
-
-#include <iostream>
-#include <memory>
 
 namespace Orbis {
     class Derma {
     private:
-        struct M {
-            size_t _ID;
-            std::string _Name;
-            sf::Vector2f _Size;
-            sf::Vector2f _Position;
-            size_t _ZLevel;
+        size_t mID;
+        std::string mName;
+        sf::Vector2f mSize;
+        sf::Vector2f mPosition;
+        size_t mZLevel;
+        bool mIsVisible;
+        bool mIsDebugMode;
 
-            bool _IsDraggable;
-            bool _IsResizable;
+        std::vector<std::unique_ptr<DermaComponent>> mComponents;
 
-            bool _IsSelected;
-            bool _IsFocused;
-            bool _IsHidden;
-
-            bool _IsDragging;
-            bool _IsResizing;
-
-            sf::Vector2f _OffsetDragging;
-            sf::Vector2f _OffsetResizing;
-
-            bool _IsDebugMode;
-        } m;
-
-        explicit Derma(M m) : m(std::move(m)) {}
+        Selectable* mComponentSelectable = nullptr;
+        Movable* mComponentMovable = nullptr;
+        Resizable* mComponentResizable = nullptr;
 
     public:
-        static Derma Create(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position) {
-            return Derma(M{
-                ._ID = id,
-                ._Name = name,
-                ._Size = size,
-                ._Position = position,
-                ._ZLevel = 0,
+        Derma(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position, size_t z_level)
+            : mID(std::move(id)), mName(name), mSize(size), mPosition(position), mZLevel(z_level), mIsVisible(true), mIsDebugMode(false) {}
 
-                ._IsDraggable = false,
-                ._IsResizable = false,
-
-                ._IsSelected = false,
-                ._IsFocused = false,
-                ._IsHidden = false,
-
-                ._IsDragging = false,
-                ._IsResizing = false,
-
-                ._OffsetDragging = {0.0, 0.0},
-                ._OffsetResizing = {0.0, 0.0},
-
-                ._IsDebugMode = false});
+        static Derma Create(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position, size_t z_level) {
+            return Derma(std::move(id), name, size, position, z_level);
         }
 
-        size_t GetID() { return m._ID; }
-        std::string GetName() { return m._Name; }
-        sf::Vector2f GetSize() { return m._Size; }
-        sf::Vector2f GetPosition() { return m._Position; }
-        size_t GetZLevel() { return m._ZLevel; }
-        std::string GetDebugModeStatus() { return (m._IsDebugMode == true ? "true" : "false"); }
+        size_t GetID() { return mID; }
+        std::string GetName() { return mName; }
+        sf::Vector2f GetSize() { return mSize; }
+        sf::Vector2f GetPosition() { return mPosition; }
+        size_t GetZLevel() { return mZLevel; }
+        std::string GetDebugModeStatus() { return (mIsDebugMode == true ? "true" : "false"); }
 
-        void SetName(std::string name) { m._Name = name; }
-        void SetSize(sf::Vector2f size) { m._Size = size; }
-        void SetPosition(sf::Vector2f position) { m._Position = position; }
-        void SetZLevel(size_t zvalue) { m._ZLevel = zvalue; }
-        void SetDraggable(bool is_draggable) { m._IsDraggable = is_draggable; }
-        void SetResizable(bool is_resizable) { m._IsResizable = is_resizable; }
-        void SetDebugMode(bool is_debugmode) { m._IsDebugMode = is_debugmode; }
+        template <typename T>
+        T* GetComponent() const {
+            for (const auto& component : mComponents) {
+                if (auto* casted = dynamic_cast<T*>(component.get())) {
+                    return casted;
+                }
+            }
 
-        bool IsMouseInDermaArea(sf::Vector2i pos_mouse) {
-            float p_mx = static_cast<float>(pos_mouse.x);
-            float p_my = static_cast<float>(pos_mouse.y);
-            float p_x1 = m._Position.x;
-            float p_x2 = m._Position.x + m._Size.x;
-            float p_y1 = m._Position.y;
-            float p_y2 = m._Position.y + m._Size.y;
-
-            return ((p_x1 <= p_mx && p_mx <= p_x2) && (p_y1 <= p_my && p_my <= p_y2)) ? true : false;
+            return nullptr;
         }
 
-        void HandleMouseClicks(sf::Vector2i pos_mouse, bool is_lmouse_pressed, bool is_rmouse_pressed) {
-            float p_mx = static_cast<float>(pos_mouse.x);
-            float p_my = static_cast<float>(pos_mouse.y);
-            sf::Vector2f pos_mouse_f = {p_mx, p_my};
+        void SetName(std::string name) { mName = name; }
+        void SetSize(sf::Vector2f size) { mSize = size; }
+        void SetPosition(sf::Vector2f position) { mPosition = position; }
+        void SetZLevel(size_t zlevel) { mZLevel = zlevel; }
+        void SetDebugMode(bool is_debugmode) { mIsDebugMode = is_debugmode; }
 
-            if ((is_lmouse_pressed == true) || (is_rmouse_pressed == true)) {
-                if (IsMouseInDermaArea(pos_mouse) == true) {
-                    m._IsSelected = true;
-                }
+        template <typename T, typename... Args>
+        T* AddComponent(Args&&... args) {
+            auto component = std::make_unique<T>(*this, std::forward<Args>(args)...);
+            T* rawPointer = component.get();
+            mComponents.push_back(std::move(component));
 
-                if ((m._IsSelected == true) && (m._IsDraggable == true) && (m._IsDragging == false) && (is_rmouse_pressed == false)) {
-                    m._IsDragging = true;
-                    m._OffsetDragging = pos_mouse_f - m._Position;
-                }
+            if constexpr (std::is_same_v<T, Selectable>) {
+                mComponentSelectable = rawPointer;
+            }
 
-                if ((m._IsSelected == true) && (m._IsResizable == true) && (m._IsResizing == false) && (is_lmouse_pressed == false)) {
-                    m._IsResizing = true;
-                    m._OffsetResizing = pos_mouse_f - m._Size;
-                }
+            if constexpr (std::is_same_v<T, Movable>) {
+                mComponentMovable = rawPointer;
+            }
 
-                if (m._IsDragging == true) {
-                    m._Position = pos_mouse_f - m._OffsetDragging;
-                }
+            if constexpr (std::is_same_v<T, Resizable>) {
+                mComponentResizable = rawPointer;
+            }
 
-                if (m._IsResizing == true) {
-                    m._Size = pos_mouse_f - m._OffsetResizing;
-                }
-            } else {
-                m._IsSelected = false;
-                m._IsDragging = false;
-                m._IsResizing = false;
+            return rawPointer;
+        }
+
+        template <typename T>
+        void RemoveComponent() {
+            mComponents.erase(
+                std::remove_if(mComponents.begin(), mComponents.end(), [](const auto& component) {
+                    return dynamic_cast<T*>(component.get()) != nullptr;
+                }),
+                components.end());
+
+            if constexpr (std::is_same_v<T, Selectable>) {
+                mComponentSelectable = nullptr;
+            }
+
+            if constexpr (std::is_same_v<T, Movable>) {
+                mComponentMovable = nullptr;
+            }
+
+            if constexpr (std::is_same_v<T, Resizable>) {
+                mComponentResizable = nullptr;
+            }
+        }
+
+        void SetSelectable(bool is_selectable) {
+            if ((is_selectable == true) && (mComponentSelectable == nullptr)) {
+                mComponentSelectable = AddComponent<Selectable>();
+            } else if ((is_selectable == false) && (mComponentSelectable != nullptr)) {
+                RemoveComponent<Selectable>();
+
+                mComponentSelectable = nullptr;
             }
         };
 
-        void Render(sf::RenderWindow& window) {
-            if (m._IsDebugMode == true) {
-                sf::RectangleShape debug_rectangle(m._Size);
+        void SetMovable(bool is_movable) {
+            if ((is_movable == true) && (mComponentMovable == nullptr)) {
+                mComponentMovable = AddComponent<Movable>();
+            } else if ((is_movable == false) && (mComponentMovable != nullptr)) {
+                RemoveComponent<Movable>();
 
-                debug_rectangle.setPosition(m._Position);
-                debug_rectangle.setFillColor(sf::Color(255, 255, 255, 255));
-
-                if (m._IsSelected == true) {
-                    debug_rectangle.setFillColor(sf::Color(100, 100, 100, 255));
-                }
-
-                window.draw(debug_rectangle);
+                mComponentMovable = nullptr;
             }
-        }
+        };
+
+        void SetResizable(bool is_resizable) {
+            if ((is_resizable == true) && (mComponentResizable == nullptr)) {
+                mComponentResizable = AddComponent<Resizable>();
+            } else if ((is_resizable == false) && (mComponentResizable != nullptr)) {
+                RemoveComponent<Resizable>();
+
+                mComponentResizable = nullptr;
+            }
+        };
+
+        void Update(const Controls& controls);
+        void Render(sf::RenderWindow& window);
     };
 }
