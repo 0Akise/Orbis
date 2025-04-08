@@ -29,23 +29,25 @@ namespace Orbis {
 
     public:
         Derma(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position, size_t z_level)
-            : mID(std::move(id)), mName(name), mSize(size), mPosition(position), mZLevel(z_level), mIsVisible(true), mIsDebugMode(false) {}
+            : mID(id), mName(std::move(name)), mSize(size), mPosition(position), mZLevel(z_level), mIsVisible(true), mIsDebugMode(false) {}
 
         static Derma Create(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position, size_t z_level) {
-            return Derma(std::move(id), name, size, position, z_level);
+            return Derma(id, std::move(name), size, position, z_level);
         }
 
-        size_t GetID() { return mID; }
-        std::string GetName() { return mName; }
-        sf::Vector2f GetSize() { return mSize; }
-        sf::Vector2f GetPosition() { return mPosition; }
-        size_t GetZLevel() { return mZLevel; }
-        std::string GetDebugModeStatus() { return (mIsDebugMode == true ? "true" : "false"); }
+        size_t GetID() const { return mID; }
+        const std::string& GetName() const { return mName; }
+        sf::Vector2f GetSize() const { return mSize; }
+        sf::Vector2f GetPosition() const { return mPosition; }
+        size_t GetZLevel() const { return mZLevel; }
+        std::string GetDebugModeStatus() const { return (mIsDebugMode == true ? "true" : "false"); }
 
         template <typename T>
         T* GetComponent() const {
             for (const auto& component : mComponents) {
-                if (auto* casted = dynamic_cast<T*>(component.get())) {
+                auto* casted = dynamic_cast<T*>(component.get());
+
+                if (casted != nullptr) {
                     return casted;
                 }
             }
@@ -53,7 +55,7 @@ namespace Orbis {
             return nullptr;
         }
 
-        void SetName(std::string name) { mName = name; }
+        void SetName(std::string name) { mName = std::move(name); }
         void SetSize(sf::Vector2f size) { mSize = size; }
         void SetPosition(sf::Vector2f position) { mPosition = position; }
         void SetZLevel(size_t zlevel) { mZLevel = zlevel; }
@@ -62,22 +64,22 @@ namespace Orbis {
         template <typename T, typename... Args>
         T* AddComponent(Args&&... args) {
             auto component = std::make_unique<T>(*this, std::forward<Args>(args)...);
-            T* rawPointer = component.get();
+            T* raw_pointer = component.get();
             mComponents.push_back(std::move(component));
 
             if constexpr (std::is_same_v<T, Selectable>) {
-                mComponentSelectable = rawPointer;
+                mComponentSelectable = raw_pointer;
             }
 
             if constexpr (std::is_same_v<T, Movable>) {
-                mComponentMovable = rawPointer;
+                mComponentMovable = raw_pointer;
             }
 
             if constexpr (std::is_same_v<T, Resizable>) {
-                mComponentResizable = rawPointer;
+                mComponentResizable = raw_pointer;
             }
 
-            return rawPointer;
+            return raw_pointer;
         }
 
         template <typename T>
@@ -86,7 +88,7 @@ namespace Orbis {
                 std::remove_if(mComponents.begin(), mComponents.end(), [](const auto& component) {
                     return dynamic_cast<T*>(component.get()) != nullptr;
                 }),
-                components.end());
+                mComponents.end());
 
             if constexpr (std::is_same_v<T, Selectable>) {
                 mComponentSelectable = nullptr;
