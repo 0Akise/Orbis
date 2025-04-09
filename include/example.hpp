@@ -1,12 +1,12 @@
 #pragma once
 
+#include <iostream>
+#include <memory>
+
 #include <SFML/Graphics.hpp>
 
 #include "orbis/controls.hpp"
 #include "orbis/ui.hpp"
-
-#include <iostream>
-#include <memory>
 
 namespace OrbisExample {
     struct ResourceVault {
@@ -23,35 +23,32 @@ namespace OrbisExample {
 namespace OrbisExample {
     class Program {
     private:
-        struct M {
-            ResourceVault _Vault;
-            Orbis::UI _UI;
-            Orbis::Controls _Controls;
-        } m;
-
-        explicit Program(M m) : m(std::move(m)) {}
+        ResourceVault mVault;
+        Orbis::UI mUI;
+        Orbis::Controls mControls;
 
     public:
+        Program()
+            : mVault(ResourceVault()), mUI(Orbis::UI::Create()), mControls(Orbis::Controls::Create()) {}
+
         static Program Create() {
-            return Program(M{
-                ._Vault = ResourceVault(),
-                ._UI = Orbis::UI::Create(),
-                ._Controls = Orbis::Controls::Create()});
+            return Program();
         }
 
         void Init() {
-            m._UI.DermaRegister("Main Menu", {100, 100}, {100, 100});
-            m._UI.DermaRegister("Sub Menu", {100, 100}, {200, 300});
-            m._UI.DermaSetDebugMode(1, "Sub Menu", true);
-            m._UI.DermaSetDraggable(1, "Sub Menu", true);
-            m._UI.DermaSetResizable(1, "Sub Menu", true);
-            m._UI.DermaShowList();
+            mUI.DermaRegister("Main Menu", {100, 100}, {100, 100});
+            mUI.DermaRegister("Sub Menu", {100, 100}, {200, 300});
+            mUI.DermaSetDebugMode(1, "Sub Menu", true);
+            mUI.DermaSetSelectable(1, "Sub Menu", true);
+            mUI.DermaSetMovable(1, "Sub Menu", true);
+            mUI.DermaSetResizable(1, "Sub Menu", true);
+            mUI.DermaShowList();
         }
 
         void Loop(sf::RenderWindow& window) {
             while (window.isOpen()) {
                 while (const std::optional event = window.pollEvent()) {
-                    m._Controls.SetMousePosition(sf::Mouse::getPosition(window));
+                    mControls.SetMousePosition(sf::Mouse::getPosition(window));
 
                     if (event->is<sf::Event::Closed>()) {
                         window.close();
@@ -62,23 +59,23 @@ namespace OrbisExample {
                     }
 
                     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) == true) {
-                        m._Controls.SetIsLMousePressed(true);
+                        mControls.SetIsLMousePressed(true);
                     } else {
-                        m._Controls.SetIsLMousePressed(false);
+                        mControls.SetIsLMousePressed(false);
                     }
 
                     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right) == true) {
-                        m._Controls.SetIsRMousePressed(true);
+                        mControls.SetIsRMousePressed(true);
                     } else {
-                        m._Controls.SetIsRMousePressed(false);
+                        mControls.SetIsRMousePressed(false);
                     }
 
-                    m._UI.Update(m._Controls);
+                    mUI.Update(mControls);
                 }
 
                 window.clear();
 
-                m._UI.Render(window);
+                mUI.Render(window);
 
                 window.display();
             }

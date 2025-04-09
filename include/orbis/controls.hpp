@@ -5,18 +5,29 @@
 namespace Orbis {
     class Controls {
     private:
-        sf::Vector2i mMousePosition = {0, 0};
-        bool mIsLMousePressed = false;
-        bool mIsRMousePressed = false;
-        bool mIsWMousePressed = false;
-        bool mIsScrolling = false;
+        sf::Vector2i mMousePosition;
+        bool mIsLMousePressed;
+        bool mIsRMousePressed;
+        bool mIsWMousePressed;
+        bool mIsScrolling;
 
     public:
-        sf::Vector2i GetMousePosition() { return mMousePosition; }
-        bool GetIsLMousePressed() { return mIsLMousePressed; }
-        bool GetIsRMousePressed() { return mIsRMousePressed; }
-        bool GetIsWMousePressed() { return mIsWMousePressed; }
-        bool GetIsScrolling() { return mIsScrolling; }
+        Controls()
+            : mMousePosition({0, 0}),
+              mIsLMousePressed(false),
+              mIsRMousePressed(false),
+              mIsWMousePressed(false),
+              mIsScrolling(false) {}
+
+        static Controls Create() {
+            return Controls();
+        }
+
+        sf::Vector2i GetMousePosition() const { return mMousePosition; }
+        bool GetIsLMousePressed() const { return mIsLMousePressed; }
+        bool GetIsRMousePressed() const { return mIsRMousePressed; }
+        bool GetIsWMousePressed() const { return mIsWMousePressed; }
+        bool GetIsScrolling() const { return mIsScrolling; }
 
         void SetMousePosition(sf::Vector2i mouse_pos) { mMousePosition = mouse_pos; }
         void SetIsLMousePressed(bool is_lmouse_pressed) { mIsLMousePressed = is_lmouse_pressed; }
