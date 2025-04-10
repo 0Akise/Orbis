@@ -7,8 +7,7 @@ int main() {
     window.setFramerateLimit(120);
     window.setVerticalSyncEnabled(false);
 
-    program.Init();
-    program.Loop(window);
+    program.Run(window);
 
     return 0;
 }
