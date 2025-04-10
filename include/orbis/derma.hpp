@@ -8,28 +8,27 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "sfml/shapes.hpp"
+#include "orbis/controls.hpp"
+#include "orbis/enums.hpp"
 
 namespace Orbis {
-    class DermaComponent;
-    class Selectable;
-    class Movable;
-    class Resizable;
     class Derma;
-}
 
-namespace Orbis {
     class DermaComponent {
     protected:
-        Derma& mOwner;
+        Derma* mOwner;
 
     public:
-        explicit DermaComponent(Derma& owner) : mOwner(owner) {}
+        explicit DermaComponent(Derma& owner) : mOwner(&owner) {}
         virtual ~DermaComponent() = default;
 
         virtual void Update(const Controls& controls) = 0;
         virtual void Render(sf::RenderWindow&) {};
     };
+
+    class Selectable;
+    class Movable;
+    class Resizable;
 
     class Derma {
     private:
@@ -39,9 +38,9 @@ namespace Orbis {
         sf::Vector2f mPosition;
         size_t mZLevel;
 
-        bool mNeedsZLevelSorting = false;
         bool mIsVisible;
         bool mIsDebugMode;
+        bool mIsRegistered;
 
         std::vector<std::unique_ptr<DermaComponent>> mComponents;
 
@@ -50,12 +49,15 @@ namespace Orbis {
         Resizable* mComponentResizable = nullptr;
 
     public:
-        Derma(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position, size_t z_level)
-            : mID(id), mName(std::move(name)), mSize(size), mPosition(position), mZLevel(z_level), mIsVisible(true), mIsDebugMode(false) {}
-
-        static Derma Create(size_t id, std::string name, sf::Vector2f size, sf::Vector2f position, size_t z_level) {
-            return Derma(id, std::move(name), size, position, z_level);
-        }
+        Derma(DermaType, size_t id)
+            : mID(id),
+              mName("Unnamed"),
+              mSize({0.0f, 0.0f}),
+              mPosition({0.0f, 0.0f}),
+              mZLevel(0),
+              mIsVisible(true),
+              mIsDebugMode(false),
+              mIsRegistered(false) {}
 
         bool ContainsCursor(sf::Vector2f cursor) const {
             return ((mPosition.x <= cursor.x) && (cursor.x <= mPosition.x + mSize.x)) &&
@@ -85,12 +87,6 @@ namespace Orbis {
 
         template <typename T>
         void RemoveComponent() {
-            mComponents.erase(
-                std::remove_if(mComponents.begin(), mComponents.end(), [](const auto& component) {
-                    return dynamic_cast<T*>(component.get()) != nullptr;
-                }),
-                mComponents.end());
-
             if constexpr (std::is_same_v<T, Selectable>) {
                 mComponentSelectable = nullptr;
             }
@@ -102,16 +98,45 @@ namespace Orbis {
             if constexpr (std::is_same_v<T, Resizable>) {
                 mComponentResizable = nullptr;
             }
+
+            mComponents.erase(
+                std::remove_if(mComponents.begin(), mComponents.end(), [](const auto& component) {
+                    return dynamic_cast<T*>(component.get()) != nullptr;
+                }),
+                mComponents.end());
         }
 
-        size_t GetID() const { return mID; }
-        const std::string& GetName() const { return mName; }
-        sf::Vector2f GetSize() const { return mSize; }
-        sf::Vector2f GetPosition() const { return mPosition; }
+        size_t GetID() const {
+            return mID;
+        }
 
-        size_t GetZLevel() const { return mZLevel; }
+        const std::string& GetName() const {
+            return mName;
+        }
 
-        bool GetDebugModeStatus() const { return mIsDebugMode; }
+        sf::Vector2f GetSize() const {
+            return mSize;
+        }
+
+        sf::Vector2f GetPosition() const {
+            return mPosition;
+        }
+
+        size_t GetZLevel() const {
+            return mZLevel;
+        }
+
+        bool GetVisibleStatus() const {
+            return mIsVisible;
+        }
+
+        bool GetDebugModeStatus() const {
+            return mIsDebugMode;
+        }
+
+        bool GetRegisteredStatus() const {
+            return mIsRegistered;
+        }
 
         template <typename T>
         T* GetComponent() const {
@@ -126,26 +151,67 @@ namespace Orbis {
             return nullptr;
         }
 
-        void SetName(std::string name) { mName = std::move(name); }
-        void SetSize(sf::Vector2f size) { mSize = size; }
-        void SetPosition(sf::Vector2f position) { mPosition = position; }
+        Derma& SetName(std::string name) {
+            mName = std::move(name);
 
-        void SetZLevel(size_t zlevel) {
-            if (mZLevel != zlevel) {
-                mZLevel = zlevel;
-                mNeedsZLevelSorting = true;
-            }
+            return *this;
         }
 
-        void SetDebugMode(bool is_debugmode) { mIsDebugMode = is_debugmode; }
+        Derma& SetSize(sf::Vector2f size) {
+            mSize = size;
+
+            return *this;
+        }
+
+        Derma& SetPosition(sf::Vector2f position) {
+            mPosition = position;
+
+            return *this;
+        }
+
+        Derma& SetZLevel(size_t zlevel) {
+            mZLevel = zlevel;
+
+            return *this;
+        }
+
+        Derma& SetVisible(bool is_visible) {
+            mIsVisible = is_visible;
+
+            return *this;
+        }
+
+        Derma& SetDebugMode(bool is_debugmode) {
+            mIsDebugMode = is_debugmode;
+
+            return *this;
+        }
+
+        void SetRegistered(bool is_registered) {
+            mIsRegistered = is_registered;
+        }
+
+        Derma& SetComponents(DermaComponentFlag flags) {
+            bool has_selectable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaComponentFlag::Selectable)) != 0;
+
+            SetSelectable(has_selectable);
+
+            bool has_movable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaComponentFlag::Movable)) != 0;
+
+            SetMovable(has_movable);
+
+            bool has_resizable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaComponentFlag::Resizable)) != 0;
+
+            SetResizable(has_resizable);
+
+            return *this;
+        }
 
         void SetSelectable(bool is_selectable) {
             if ((is_selectable == true) && (mComponentSelectable == nullptr)) {
                 mComponentSelectable = AddComponent<Selectable>();
             } else if ((is_selectable == false) && (mComponentSelectable != nullptr)) {
                 RemoveComponent<Selectable>();
-
-                mComponentSelectable = nullptr;
             }
         }
 
@@ -154,8 +220,6 @@ namespace Orbis {
                 mComponentMovable = AddComponent<Movable>();
             } else if ((is_movable == false) && (mComponentMovable != nullptr)) {
                 RemoveComponent<Movable>();
-
-                mComponentMovable = nullptr;
             }
         }
 
@@ -164,8 +228,6 @@ namespace Orbis {
                 mComponentResizable = AddComponent<Resizable>();
             } else if ((is_resizable == false) && (mComponentResizable != nullptr)) {
                 RemoveComponent<Resizable>();
-
-                mComponentResizable = nullptr;
             }
         }
 
@@ -203,7 +265,8 @@ namespace Orbis {
         bool mIsSelected;
 
     public:
-        explicit Selectable(Derma& owner) : DermaComponent(owner) {}
+        explicit Selectable(Derma& owner)
+            : DermaComponent(owner), mIsSelected(false) {}
 
         bool GetSelectedStatus() const { return mIsSelected; }
 
@@ -213,7 +276,7 @@ namespace Orbis {
             bool is_lmouse_pressed = controls.GetIsLMousePressed();
 
             if (is_lmouse_pressed == true) {
-                if ((mIsSelected == false) && mOwner.ContainsCursor(pos_mouse_f)) {
+                if (mIsSelected == false && mOwner->ContainsCursor(pos_mouse_f)) {
                     mIsSelected = true;
                 } else {
                     mIsSelected = false;
@@ -228,7 +291,8 @@ namespace Orbis {
         sf::Vector2f mOffsetMoving;
 
     public:
-        explicit Movable(Derma& owner) : DermaComponent(owner) {}
+        explicit Movable(Derma& owner)
+            : DermaComponent(owner), mIsMoving(false), mOffsetMoving({0.0f, 0.0f}) {}
 
         bool GetMovingStatus() const { return mIsMoving; }
 
@@ -238,13 +302,13 @@ namespace Orbis {
             bool is_lmouse_pressed = controls.GetIsLMousePressed();
 
             if (is_lmouse_pressed) {
-                if (mIsMoving == false && mOwner.ContainsCursor(pos_mouse_f)) {
+                if (mIsMoving == false && mOwner->ContainsCursor(pos_mouse_f)) {
                     mIsMoving = true;
-                    mOffsetMoving = pos_mouse_f - mOwner.GetPosition();
+                    mOffsetMoving = pos_mouse_f - mOwner->GetPosition();
                 }
 
                 if (mIsMoving == true) {
-                    mOwner.SetPosition(pos_mouse_f - mOffsetMoving);
+                    mOwner->SetPosition(pos_mouse_f - mOffsetMoving);
                 }
             } else {
                 mIsMoving = false;
@@ -271,8 +335,8 @@ namespace Orbis {
             sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
             bool is_rmouse_pressed = controls.GetIsRMousePressed();
 
-            sf::Vector2f size_owner = mOwner.GetSize();
-            sf::Vector2f pos_owner = mOwner.GetPosition();
+            sf::Vector2f size_owner = mOwner->GetSize();
+            sf::Vector2f pos_owner = mOwner->GetPosition();
             sf::Vector2f br_owner = pos_owner + size_owner;
 
             sf::Vector2f size_handle = {10.0f, 10.0f};
@@ -281,7 +345,7 @@ namespace Orbis {
             bool is_in_handle = handle.contains(pos_mouse_f);
 
             if (is_rmouse_pressed == true) {
-                if ((mIsResizing == false) && is_in_handle) {
+                if ((mIsResizing == false) && (is_in_handle == true)) {
                     mIsResizing = true;
                     mOffsetResizing = pos_mouse_f - br_owner;
                 }
@@ -292,7 +356,7 @@ namespace Orbis {
                     size_new.x = std::max(size_new.x, mMinimumSize.x);
                     size_new.y = std::max(size_new.y, mMinimumSize.y);
 
-                    mOwner.SetSize(size_new);
+                    mOwner->SetSize(size_new);
                 }
             } else {
                 mIsResizing = false;
@@ -300,9 +364,9 @@ namespace Orbis {
         }
 
         void Render(sf::RenderWindow& window) override {
-            if (mOwner.GetDebugModeStatus()) {
-                sf::Vector2f size_owner = mOwner.GetSize();
-                sf::Vector2f pos_owner = mOwner.GetPosition();
+            if (mOwner->GetDebugModeStatus() == true) {
+                sf::Vector2f size_owner = mOwner->GetSize();
+                sf::Vector2f pos_owner = mOwner->GetPosition();
 
                 sf::RectangleShape handle({10.0f, 10.0f});
                 handle.setPosition({pos_owner.x + size_owner.x - 10.0f, pos_owner.y + size_owner.y - 10.0f});

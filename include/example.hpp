@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #include <SFML/Graphics.hpp>
 
@@ -21,28 +22,30 @@ namespace OrbisExample {
 }
 
 namespace OrbisExample {
+    using namespace Orbis;
+
     class Program {
     private:
         ResourceVault mVault;
-        Orbis::UI mUI;
-        Orbis::Controls mControls;
+        Controls mControls;
 
     public:
         Program()
-            : mVault(ResourceVault()), mUI(Orbis::UI::Create()), mControls(Orbis::Controls::Create()) {}
+            : mVault(ResourceVault()), mControls(Controls::Create()) {}
 
         static Program Create() {
             return Program();
         }
 
         void Init() {
-            mUI.DermaRegister("Main Menu", {100, 100}, {100, 100});
-            mUI.DermaRegister("Sub Menu", {100, 100}, {200, 300});
-            mUI.DermaSetDebugMode(1, "Sub Menu", true);
-            mUI.DermaSetSelectable(1, "Sub Menu", true);
-            mUI.DermaSetMovable(1, "Sub Menu", true);
-            mUI.DermaSetResizable(1, "Sub Menu", true);
-            mUI.DermaShowList();
+            Derma& my_window = UI::Create(DermaType::DWindow);
+            my_window.SetName("Sub Menu")
+                .SetSize({100, 100})
+                .SetPosition({200, 200})
+                .SetDebugMode(true)
+                .SetComponents(DermaComponentFlag::Complete);
+
+            UI::ShowDermaList();
         }
 
         void Loop(sf::RenderWindow& window) {
@@ -69,13 +72,13 @@ namespace OrbisExample {
                     } else {
                         mControls.SetIsRMousePressed(false);
                     }
-
-                    mUI.Update(mControls);
                 }
+
+                UI::Update(mControls);
 
                 window.clear();
 
-                mUI.Render(window);
+                UI::Render(window);
 
                 window.display();
             }
