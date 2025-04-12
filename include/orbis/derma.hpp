@@ -8,28 +8,12 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "orbis/controls.hpp"
-#include "orbis/enums.hpp"
+#include "Orbis/Controls.hpp"
+#include "Orbis/DermaComponent.hpp"
+#include "Orbis/DermaEvent.hpp"
+#include "Orbis/Enums.hpp"
 
 namespace Orbis {
-    class Derma;
-
-    class DermaComponent {
-    protected:
-        Derma* mOwner;
-
-    public:
-        explicit DermaComponent(Derma& owner) : mOwner(&owner) {}
-        virtual ~DermaComponent() = default;
-
-        virtual void Update(const Controls& controls) = 0;
-        virtual void Render(sf::RenderWindow&) {};
-    };
-
-    class Selectable;
-    class Movable;
-    class Resizable;
-
     class Derma {
     private:
         size_t mID;
@@ -42,6 +26,7 @@ namespace Orbis {
         bool mIsDebugMode;
         bool mIsRegistered;
 
+        EventSystem mEvent;
         std::vector<std::unique_ptr<DermaComponent>> mComponents;
 
         Selectable* mComponentSelectable = nullptr;
@@ -59,28 +44,13 @@ namespace Orbis {
               mIsDebugMode(false),
               mIsRegistered(false) {}
 
-        bool ContainsCursor(sf::Vector2f cursor) const {
-            return ((mPosition.x <= cursor.x) && (cursor.x <= mPosition.x + mSize.x)) &&
-                   ((mPosition.y <= cursor.y) && (cursor.y <= mPosition.y + mSize.y));
-        }
-
         template <typename T, typename... Args>
         T* AddComponent(Args&&... args) {
             auto component = std::make_unique<T>(*this, std::forward<Args>(args)...);
             T* raw_pointer = component.get();
+
+            component->Initialize(mEvent);
             mComponents.push_back(std::move(component));
-
-            if constexpr (std::is_same_v<T, Selectable>) {
-                mComponentSelectable = raw_pointer;
-            }
-
-            if constexpr (std::is_same_v<T, Movable>) {
-                mComponentMovable = raw_pointer;
-            }
-
-            if constexpr (std::is_same_v<T, Resizable>) {
-                mComponentResizable = raw_pointer;
-            }
 
             return raw_pointer;
         }
@@ -104,6 +74,11 @@ namespace Orbis {
                     return dynamic_cast<T*>(component.get()) != nullptr;
                 }),
                 mComponents.end());
+        }
+
+        bool IsInBounds(sf::Vector2f cursor_position) const {
+            return ((mPosition.x <= cursor_position.x) && (cursor_position.x <= mPosition.x + mSize.x)) &&
+                   ((mPosition.y <= cursor_position.y) && (cursor_position.y <= mPosition.y + mSize.y));
         }
 
         size_t GetID() const {
@@ -166,6 +141,12 @@ namespace Orbis {
         Derma& SetPosition(sf::Vector2f position) {
             mPosition = position;
 
+            DermaEvent event;
+
+            event.mType = DermaEventType::Moved;
+            event.mPosition = position;
+            mEvent.EmitEvent(event);
+
             return *this;
         }
 
@@ -191,16 +172,16 @@ namespace Orbis {
             mIsRegistered = is_registered;
         }
 
-        Derma& SetComponents(DermaComponentFlag flags) {
-            bool has_selectable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaComponentFlag::Selectable)) != 0;
+        Derma& SetComponents(DermaOptionFlag flags) {
+            bool has_selectable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaOptionFlag::Selectable)) != 0;
 
             SetSelectable(has_selectable);
 
-            bool has_movable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaComponentFlag::Movable)) != 0;
+            bool has_movable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaOptionFlag::Movable)) != 0;
 
             SetMovable(has_movable);
 
-            bool has_resizable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaComponentFlag::Resizable)) != 0;
+            bool has_resizable = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(DermaOptionFlag::Resizable)) != 0;
 
             SetResizable(has_resizable);
 
@@ -231,9 +212,44 @@ namespace Orbis {
             }
         }
 
+        void ProcessControls(const Controls& controls) {
+            sf::Vector2i pos_mouse = controls.GetMousePosition();
+            sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
+            DermaEvent event_move;
+
+            event_move.mType = DermaEventType::MouseMove;
+            event_move.mPositionMouse = pos_mouse_f;
+            event_move.mIsInBounds = IsInBounds(pos_mouse_f);
+
+            mEvent.EmitEvent(event_move);
+
+            static bool was_pressed = false;
+            bool is_pressed = controls.GetIsLMousePressed();
+
+            if ((is_pressed == true) && (was_pressed == false)) {
+                DermaEvent event_lmouse_down;
+
+                event_lmouse_down.mType = DermaEventType::MouseDown;
+                event_lmouse_down.mPositionMouse = pos_mouse_f;
+                event_lmouse_down.mIsInBounds = IsInBounds(pos_mouse_f);
+                mEvent.EmitEvent(event_lmouse_down);
+            } else if ((is_pressed == false) && (was_pressed == true)) {
+                DermaEvent event_lmouse_up;
+
+                event_lmouse_up.mType = DermaEventType::MouseUp;
+                event_lmouse_up.mPositionMouse = pos_mouse_f;
+                event_lmouse_up.mIsInBounds = IsInBounds(pos_mouse_f);
+                mEvent.EmitEvent(event_lmouse_up);
+            }
+
+            was_pressed = is_pressed;
+        }
+
         void Update(const Controls& controls) {
             if (mIsVisible == false)
                 return;
+
+            ProcessControls(controls);
 
             for (auto& component : mComponents) {
                 component->Update(controls);
@@ -256,123 +272,6 @@ namespace Orbis {
 
             for (auto& component : mComponents) {
                 component->Render(window);
-            }
-        }
-    };
-
-    class Selectable : public DermaComponent {
-    private:
-        bool mIsSelected;
-
-    public:
-        explicit Selectable(Derma& owner)
-            : DermaComponent(owner), mIsSelected(false) {}
-
-        bool GetSelectedStatus() const { return mIsSelected; }
-
-        void Update(const Controls& controls) override {
-            sf::Vector2i pos_mouse = controls.GetMousePosition();
-            sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
-            bool is_lmouse_pressed = controls.GetIsLMousePressed();
-
-            if (is_lmouse_pressed == true) {
-                if (mIsSelected == false && mOwner->ContainsCursor(pos_mouse_f)) {
-                    mIsSelected = true;
-                } else {
-                    mIsSelected = false;
-                }
-            }
-        }
-    };
-
-    class Movable : public DermaComponent {
-    private:
-        bool mIsMoving;
-        sf::Vector2f mOffsetMoving;
-
-    public:
-        explicit Movable(Derma& owner)
-            : DermaComponent(owner), mIsMoving(false), mOffsetMoving({0.0f, 0.0f}) {}
-
-        bool GetMovingStatus() const { return mIsMoving; }
-
-        void Update(const Controls& controls) override {
-            sf::Vector2i pos_mouse = controls.GetMousePosition();
-            sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
-            bool is_lmouse_pressed = controls.GetIsLMousePressed();
-
-            if (is_lmouse_pressed) {
-                if (mIsMoving == false && mOwner->ContainsCursor(pos_mouse_f)) {
-                    mIsMoving = true;
-                    mOffsetMoving = pos_mouse_f - mOwner->GetPosition();
-                }
-
-                if (mIsMoving == true) {
-                    mOwner->SetPosition(pos_mouse_f - mOffsetMoving);
-                }
-            } else {
-                mIsMoving = false;
-            }
-        }
-    };
-
-    class Resizable : public DermaComponent {
-    private:
-        bool mIsResizing = false;
-        sf::Vector2f mOffsetResizing;
-        sf::Vector2f mMinimumSize = {10.0f, 10.0f};
-
-    public:
-        explicit Resizable(Derma& owner) : DermaComponent(owner) {}
-
-        bool GetResizingStatus() const { return mIsResizing; }
-        sf::Vector2f GetMinimumSize() const { return mMinimumSize; }
-
-        void SetMinimumSize(sf::Vector2f size) { mMinimumSize = size; }
-
-        void Update(const Controls& controls) override {
-            sf::Vector2i pos_mouse = controls.GetMousePosition();
-            sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
-            bool is_rmouse_pressed = controls.GetIsRMousePressed();
-
-            sf::Vector2f size_owner = mOwner->GetSize();
-            sf::Vector2f pos_owner = mOwner->GetPosition();
-            sf::Vector2f br_owner = pos_owner + size_owner;
-
-            sf::Vector2f size_handle = {10.0f, 10.0f};
-            sf::Vector2f pos_handle = {br_owner.x - size_handle.x, br_owner.y - size_handle.y};
-            sf::Rect<float> handle(pos_handle, size_handle);
-            bool is_in_handle = handle.contains(pos_mouse_f);
-
-            if (is_rmouse_pressed == true) {
-                if ((mIsResizing == false) && (is_in_handle == true)) {
-                    mIsResizing = true;
-                    mOffsetResizing = pos_mouse_f - br_owner;
-                }
-
-                if (mIsResizing == true) {
-                    sf::Vector2f size_new = (pos_mouse_f - mOffsetResizing) - pos_owner;
-
-                    size_new.x = std::max(size_new.x, mMinimumSize.x);
-                    size_new.y = std::max(size_new.y, mMinimumSize.y);
-
-                    mOwner->SetSize(size_new);
-                }
-            } else {
-                mIsResizing = false;
-            }
-        }
-
-        void Render(sf::RenderWindow& window) override {
-            if (mOwner->GetDebugModeStatus() == true) {
-                sf::Vector2f size_owner = mOwner->GetSize();
-                sf::Vector2f pos_owner = mOwner->GetPosition();
-
-                sf::RectangleShape handle({10.0f, 10.0f});
-                handle.setPosition({pos_owner.x + size_owner.x - 10.0f, pos_owner.y + size_owner.y - 10.0f});
-                handle.setFillColor(sf::Color(200, 200, 200));
-
-                window.draw(handle);
             }
         }
     };

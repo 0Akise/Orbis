@@ -6,8 +6,8 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "orbis/controls.hpp"
-#include "orbis/ui.hpp"
+#include "Orbis/Controls.hpp"
+#include "Orbis/UI.hpp"
 
 namespace OrbisExample {
     struct ResourceVault {
@@ -48,7 +48,7 @@ namespace OrbisExample {
                 .SetSize({300, 300})
                 .SetPosition({200, 200})
                 .SetDebugMode(true)
-                .SetComponents(DermaComponentFlag::Complete);
+                .SetComponents(DermaOptionFlag::Default);
 
             UI::ShowDermaList();
 

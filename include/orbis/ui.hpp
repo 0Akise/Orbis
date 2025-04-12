@@ -7,8 +7,8 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "orbis/derma.hpp"
-#include "orbis/enums.hpp"
+#include "Orbis/Derma.hpp"
+#include "Orbis/Enums.hpp"
 
 namespace Orbis {
     class UI {
@@ -35,8 +35,7 @@ namespace Orbis {
             std::cout << "=====================\n";
 
             for (const auto& derma : mDermas) {
-                std::cout << "ID: " << derma.GetID()
-                          << "\t"
+                std::cout << "ID: " << derma.GetID() << "\t"
                           << "Name: " << derma.GetName() << "\n";
             }
 
