@@ -49,10 +49,6 @@ namespace Orbis {
         }
 
         void Instance_Render(sf::RenderWindow& window) {
-            std::sort(mDermas.begin(), mDermas.end(), [](const Derma& a, const Derma& b) {
-                return a.GetZLevel() < b.GetZLevel();
-            });
-
             for (auto& derma : mDermas) {
                 derma.Render(window);
             }

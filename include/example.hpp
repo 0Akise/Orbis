@@ -37,20 +37,20 @@ namespace OrbisExample {
             return Program();
         }
 
-        void Run(sf::RenderWindow& window) {
-            Derma& example_frame = UI::Create(DermaType::DFrame);
-            example_frame.SetName("Main Frame")
-                .SetSize({100, 100})
-                .SetPosition({100, 100});
+void Run(sf::RenderWindow& window) {
+    Derma& example_frame = UI::Create(DermaType::DFrame);
+    example_frame.SetName("Main Frame")
+        .SetSize({100, 100})
+        .SetPosition({100, 100});
 
-            Derma& example_window = UI::Create(DermaType::DWindow);
-            example_window.SetName("Sub Menu")
-                .SetSize({300, 300})
-                .SetPosition({200, 200})
-                .SetDebugMode(true)
-                .SetComponents(DermaOptionFlag::Default);
+    Derma& example_window = UI::Create(DermaType::DWindow);
+    example_window.SetName("Sub Menu")
+        .SetSize({300, 300})
+        .SetPosition({200, 200})
+        .SetDebugMode(true)
+        .SetComponents(DermaOptionFlag::Default);
 
-            UI::ShowDermaList();
+    UI::ShowDermaList();
 
             while (window.isOpen()) {
                 while (const std::optional event = window.pollEvent()) {
