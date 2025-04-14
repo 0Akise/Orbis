@@ -9,12 +9,13 @@
 #include <SFML/System.hpp>
 
 #include "Orbis/Controls.hpp"
-#include "Orbis/DermaOption.hpp"
+#include "Orbis/Data.hpp"
 #include "Orbis/DermaEvent.hpp"
-#include "Orbis/Enums.hpp"
+#include "Orbis/DermaInterface.hpp"
+#include "Orbis/DermaOption.hpp"
 
 namespace Orbis {
-    class Derma {
+    class Derma : public DermaInterface {
     private:
         Derma* mParent = nullptr;
         std::vector<Derma*> mChildren;
@@ -25,12 +26,14 @@ namespace Orbis {
         sf::Vector2f mPosition;
         size_t mZLevel;
 
-        bool mWasPressed;
+        EventSystem mEventSystem;
+
+        bool mWasLMousePressed;
+        bool mWasRMousePressed;
         bool mIsVisible;
         bool mIsRegistered;
         bool mIsInBounds;
 
-        EventSystem mEventSystem;
         std::vector<std::shared_ptr<DermaOption>> mOptions;
         std::weak_ptr<Selectable> mOptionSelectable;
         std::weak_ptr<Movable> mOptionMovable;
@@ -45,11 +48,42 @@ namespace Orbis {
               mSize({0.0f, 0.0f}),
               mPosition({0.0f, 0.0f}),
               mZLevel(0),
-              mWasPressed(false),
+              mWasLMousePressed(false),
+              mWasRMousePressed(false),
               mIsVisible(true),
               mIsRegistered(false),
               mIsInBounds(false),
               mIsDebugMode(false) {}
+
+        void AddChild(Derma& child) {
+            if (child.mParent != nullptr)
+                child.mParent->RemoveChild(child);
+
+            child.mParent = this;
+            mChildren.push_back(&child);
+
+            DermaEvent event_parent_changed;
+            event_parent_changed.mType = DermaEventType::ParentChanged;
+            mEventSystem.EmitEvent(event_parent_changed);
+
+            DermaEvent event_child_added;
+            event_child_added.mType = DermaEventType::ChildAdded;
+            mEventSystem.EmitEvent(event_child_added);
+        }
+
+        void RemoveChild(Derma& child) {
+            auto iter = std::find(mChildren.begin(), mChildren.end(), &child);
+
+            if (iter != mChildren.end()) {
+                (*iter)->mParent = nullptr;
+
+                mChildren.erase(iter);
+
+                DermaEvent event_child_removed;
+                event_child_removed.mType = DermaEventType::ChildRemoved;
+                mEventSystem.EmitEvent(event_child_removed);
+            }
+        }
 
         template <typename T, typename... Args>
         std::shared_ptr<T> AddOption(Args&&... args) {
@@ -87,53 +121,17 @@ namespace Orbis {
             }
 
             mOptions.erase(
-                std::remove_if(mOptions.begin(), mOptions.end(), [](const auto& component) {
-                    return dynamic_cast<T*>(component.get()) != nullptr;
+                std::remove_if(mOptions.begin(), mOptions.end(), [](const auto& option) {
+                    return dynamic_cast<T*>(option.get()) != nullptr;
                 }),
                 mOptions.end());
-        }
-
-        bool IsInBounds(sf::Vector2f cursor_position) const {
-            return ((mPosition.x <= cursor_position.x) && (cursor_position.x <= mPosition.x + mSize.x)) &&
-                   ((mPosition.y <= cursor_position.y) && (cursor_position.y <= mPosition.y + mSize.y));
-        }
-
-        bool IsSelected() const {
-            auto selectable = mOptionSelectable.lock();
-
-            if (selectable != nullptr)
-                return selectable->GetSelectedStatus();
-
-            return false;
-        }
-
-        bool IsMoved() const {
-            auto movable = mOptionMovable.lock();
-
-            if (movable != nullptr)
-                return movable->GetMovedStatus();
-
-            return false;
-        }
-
-        bool IsResized() const {
-            auto resizable = mOptionResizable.lock();
-
-            if (resizable != nullptr)
-                return resizable->GetResizedStatus();
-
-            return false;
-        }
-
-        bool HasFlag(DermaOptionFlag flags, DermaOptionFlag flag) const {
-            return (flags & flag) == flag;
         }
 
         Derma* GetParent() const {
             return mParent;
         }
 
-        const std::vector<Derma*> GetChildren() const {
+        const std::vector<Derma*>& GetChildren() const {
             return mChildren;
         }
 
@@ -149,8 +147,15 @@ namespace Orbis {
             return mSize;
         }
 
-        sf::Vector2f GetPosition() const {
+        sf::Vector2f GetPositionLocal() const {
             return mPosition;
+        }
+
+        sf::Vector2f GetPositionGlobal() const override {
+            if (mParent == nullptr)
+                return mPosition;
+
+            return mParent->GetPositionGlobal() + mPosition;
         }
 
         size_t GetZLevel() const {
@@ -170,9 +175,9 @@ namespace Orbis {
         }
 
         template <typename T>
-        T* GetComponent() const {
-            for (const auto& component : mOptions) {
-                auto* casted = dynamic_cast<T*>(component.get());
+        T* GetOption() const {
+            for (const auto& option : mOptions) {
+                auto* casted = dynamic_cast<T*>(option.get());
 
                 if (casted != nullptr) {
                     return casted;
@@ -197,11 +202,11 @@ namespace Orbis {
         Derma& SetPosition(sf::Vector2f position) {
             mPosition = position;
 
-            DermaEvent event;
+            DermaEvent event_moved;
 
-            event.mType = DermaEventType::Moved;
-            event.mPosition = position;
-            mEventSystem.EmitEvent(event);
+            event_moved.mType = DermaEventType::Moved;
+            event_moved.mPosition = position;
+            mEventSystem.EmitEvent(event_moved);
 
             return *this;
         }
@@ -230,7 +235,7 @@ namespace Orbis {
             return *this;
         }
 
-        Derma& SetComponents(DermaOptionFlag flags) {
+        Derma& SetOptions(DermaOptionFlag flags) {
             bool has_selectable = HasFlag(flags, DermaOptionFlag::Selectable);
 
             SetSelectable(has_selectable);
@@ -270,67 +275,143 @@ namespace Orbis {
             }
         }
 
-        void ProcessControls(const Controls& controls) {
-            sf::Vector2i pos_mouse = controls.GetMousePosition();
-            sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
-            
-            mIsInBounds = IsInBounds(pos_mouse_f);
+        bool IsInBounds(sf::Vector2f cursor_position) const {
+            sf::Vector2f pos_global = GetPositionGlobal();
 
-            DermaEvent event_move;
-            event_move.mType = DermaEventType::MouseMove;
-            event_move.mPositionMouse = pos_mouse_f;
-            event_move.mIsInBounds = IsInBounds(pos_mouse_f);
-            mEventSystem.EmitEvent(event_move);
-
-            bool is_pressed = controls.GetIsLMousePressed();
-
-            if ((is_pressed == true) && (mWasPressed == false)) {
-                DermaEvent event_lmouse_down;
-
-                event_lmouse_down.mType = DermaEventType::MouseDown;
-                event_lmouse_down.mPositionMouse = pos_mouse_f;
-                event_lmouse_down.mIsInBounds = IsInBounds(pos_mouse_f);
-                mEventSystem.EmitEvent(event_lmouse_down);
-            } else if ((is_pressed == false) && (mWasPressed == true)) {
-                DermaEvent event_lmouse_up;
-
-                event_lmouse_up.mType = DermaEventType::MouseUp;
-                event_lmouse_up.mPositionMouse = pos_mouse_f;
-                event_lmouse_up.mIsInBounds = IsInBounds(pos_mouse_f);
-                mEventSystem.EmitEvent(event_lmouse_up);
-            }
-
-            mWasPressed = is_pressed;
+            return ((pos_global.x <= cursor_position.x) && (cursor_position.x <= pos_global.x + mSize.x)) &&
+                   ((pos_global.y <= cursor_position.y) && (cursor_position.y <= pos_global.y + mSize.y));
         }
 
-        void Update(const Controls& controls) {
-            if (mIsVisible == false)
-                return;
+        bool IsSelected() const {
+            auto selectable = mOptionSelectable.lock();
 
-            ProcessControls(controls);
+            if (selectable != nullptr)
+                return selectable->GetSelectedStatus();
 
-            for (auto& component : mOptions) {
-                component->Update(controls);
-            }
+            return false;
         }
 
-        void Render(sf::RenderWindow& window) {
-            if (mIsVisible == false)
-                return;
+        bool IsMoved() const {
+            auto movable = mOptionMovable.lock();
 
-            if (mIsDebugMode == true) {
-                sf::RectangleShape rect(mSize);
-                rect.setPosition(mPosition);
-                rect.setFillColor(sf::Color(255, 255, 255, 128));
-                rect.setOutlineColor(sf::Color::White);
-                rect.setOutlineThickness(1.0f);
+            if (movable != nullptr)
+                return movable->GetMovedStatus();
 
-                window.draw(rect);
-            }
-
-            for (auto& component : mOptions) {
-                component->Render(window);
-            }
+            return false;
         }
+
+        bool IsResized() const {
+            auto resizable = mOptionResizable.lock();
+
+            if (resizable != nullptr)
+                return resizable->GetResizedStatus();
+
+            return false;
+        }
+
+        bool HasFlag(DermaOptionFlag flags, DermaOptionFlag flag) const {
+            return (flags & flag) == flag;
+        }
+
+        void Update(const Controls& controls);
+        void Render(sf::RenderWindow& window);
+        void ProcessControls(const Controls& controls);
     };
+}
+
+namespace Orbis {
+    void Derma::Update(const Controls& controls) {
+        if (mIsVisible == false)
+            return;
+
+        ProcessControls(controls);
+
+        for (auto& option : mOptions) {
+            option->Update(controls);
+        }
+    }
+
+    void Derma::Render(sf::RenderWindow& window) {
+        if (mIsVisible == false)
+            return;
+
+        sf::Vector2f pos_global = GetPositionGlobal();
+
+        if (mIsDebugMode == true) {
+            sf::RectangleShape rect(mSize);
+            rect.setPosition(pos_global);
+            rect.setFillColor(sf::Color(255, 255, 255, 128));
+            rect.setOutlineColor(sf::Color::White);
+            rect.setOutlineThickness(1.0f);
+
+            window.draw(rect);
+        }
+
+        for (auto& option : mOptions) {
+            option->Render(window);
+        }
+    }
+
+    void Derma::ProcessControls(const Controls& controls) {
+        sf::Vector2i pos_mouse = controls.GetMousePosition();
+        sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
+
+        mIsInBounds = IsInBounds(pos_mouse_f);
+
+        DermaEvent event_base;
+
+        event_base.mPosition = GetPositionGlobal();
+        event_base.mSize = mSize;
+        event_base.mPositionMouse = pos_mouse_f;
+        event_base.mZLevel = mZLevel;
+        event_base.mIsInBounds = mIsInBounds;
+        event_base.mIsLMousePressed = controls.GetIsLMousePressed();
+        event_base.mIsRMousePressed = controls.GetIsRMousePressed();
+        event_base.mIsWMousePressed = controls.GetIsWMousePressed();
+        event_base.mIsVisible = mIsVisible;
+
+        DermaEvent event_move = event_base;
+
+        event_move.mType = DermaEventType::MouseMove;
+        mEventSystem.EmitEvent(event_move);
+
+        if ((event_base.mIsLMousePressed == true) && (mWasLMousePressed == false)) {
+            DermaEvent event_mouse_down = event_base;
+
+            event_mouse_down.mType = DermaEventType::MouseDown;
+            mEventSystem.EmitEvent(event_mouse_down);
+
+            event_mouse_down.mType = DermaEventType::MouseLDown;
+            mEventSystem.EmitEvent(event_mouse_down);
+        } else if ((event_base.mIsLMousePressed == false) && (mWasLMousePressed == true)) {
+            DermaEvent event_mouse_up = event_base;
+
+            event_mouse_up.mType = DermaEventType::MouseUp;
+            mEventSystem.EmitEvent(event_mouse_up);
+
+            event_mouse_up.mType = DermaEventType::MouseLUp;
+            mEventSystem.EmitEvent(event_mouse_up);
+        }
+
+        if ((event_base.mIsRMousePressed == true) && (mWasRMousePressed == false)) {
+            DermaEvent event_mouse_down = event_base;
+
+            event_mouse_down.mType = DermaEventType::MouseDown;
+            mEventSystem.EmitEvent(event_mouse_down);
+
+            event_mouse_down.mType = DermaEventType::MouseRDown;
+            mEventSystem.EmitEvent(event_mouse_down);
+        } else if ((event_base.mIsRMousePressed == false) && (mWasRMousePressed == true)) {
+            DermaEvent event_mouse_up = event_base;
+
+            event_mouse_up.mType = DermaEventType::MouseUp;
+            mEventSystem.EmitEvent(event_mouse_up);
+
+            event_mouse_up.mType = DermaEventType::MouseRUp;
+            mEventSystem.EmitEvent(event_mouse_up);
+        }
+
+        mWasLMousePressed = event_base.mIsLMousePressed;
+        mWasRMousePressed = event_base.mIsRMousePressed;
+    }
 }

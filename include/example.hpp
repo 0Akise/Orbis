@@ -37,22 +37,28 @@ namespace OrbisExample {
             return Program();
         }
 
-void Run(sf::RenderWindow& window) {
-    Derma& example_frame = UI::Create(DermaType::DFrame);
-    example_frame.SetName("Main Frame")
-        .SetSize({100, 100})
-        .SetPosition({100, 100});
+        void Run(sf::RenderWindow& window) {
+            Derma& example_frame = UI::Create(DermaType::DFrame);
+            example_frame.SetName("Main Frame")
+                .SetSize({100, 100})
+                .SetPosition({100, 100})
+                .SetDebugMode(true);
 
-    Derma& example_window = UI::Create(DermaType::DWindow);
-    example_window.SetName("Sub Menu")
-        .SetSize({300, 300})
-        .SetPosition({200, 200})
-        .SetDebugMode(true)
-        .SetComponents(DermaOptionFlag::Default);
+            Derma& example_window = UI::Create(DermaType::DWindow);
+            example_window.SetName("Sub Menu")
+                .SetSize({300, 300})
+                .SetPosition({200, 200})
+                .SetDebugMode(true)
+                .SetOptions(DermaOptionFlag::Default);
 
-    UI::ShowDermaList();
+            UI::ShowDermaList();
 
             while (window.isOpen()) {
+                mControls.SetIsLMousePressed(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left));
+                mControls.SetIsRMousePressed(sf::Mouse::isButtonPressed(sf::Mouse::Button::Right));
+                mControls.SetIsWMousePressed(sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle));
+                mControls.SetMousePosition(sf::Mouse::getPosition(window));
+
                 while (const std::optional event = window.pollEvent()) {
                     mControls.SetMousePosition(sf::Mouse::getPosition(window));
 
@@ -62,18 +68,6 @@ void Run(sf::RenderWindow& window) {
 
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape) == true) {
                         window.close();
-                    }
-
-                    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) == true) {
-                        mControls.SetIsLMousePressed(true);
-                    } else {
-                        mControls.SetIsLMousePressed(false);
-                    }
-
-                    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right) == true) {
-                        mControls.SetIsRMousePressed(true);
-                    } else {
-                        mControls.SetIsRMousePressed(false);
                     }
                 }
 
