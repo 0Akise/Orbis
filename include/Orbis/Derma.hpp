@@ -15,10 +15,10 @@
 #include "Orbis/DermaOption.hpp"
 
 namespace Orbis {
-    class Derma : public DermaInterface {
+    class Derma : public DermaInterface, public std::enable_shared_from_this<Derma> {
     private:
-        Derma* mParent = nullptr;
-        std::vector<Derma*> mChildren;
+        std::weak_ptr<Derma> mParent;
+        std::vector<std::shared_ptr<Derma>> mChildren;
 
         size_t mID;
         std::string mName;
@@ -55,12 +55,17 @@ namespace Orbis {
               mIsInBounds(false),
               mIsDebugMode(false) {}
 
-        void AddChild(Derma& child) {
-            if (child.mParent != nullptr)
-                child.mParent->RemoveChild(child);
+        static std::shared_ptr<Derma> Create(DermaType type, size_t id) {
+            return std::make_shared<Derma>(type, id);
+        }
 
-            child.mParent = this;
-            mChildren.push_back(&child);
+        void AddChild(std::shared_ptr<Derma> child) {
+            if (auto parent = child->mParent.lock()) {
+                parent->RemoveChild(child);
+            }
+
+            child->mParent = shared_from_this();
+            mChildren.push_back(std::move(child));
 
             DermaEvent event_parent_changed;
             event_parent_changed.mType = DermaEventType::ParentChanged;
@@ -71,12 +76,11 @@ namespace Orbis {
             mEventSystem.EmitEvent(event_child_added);
         }
 
-        void RemoveChild(Derma& child) {
-            auto iter = std::find(mChildren.begin(), mChildren.end(), &child);
+        void RemoveChild(const std::shared_ptr<Derma>& child) {
+            auto iter = std::find(mChildren.begin(), mChildren.end(), child);
 
             if (iter != mChildren.end()) {
-                (*iter)->mParent = nullptr;
-
+                (*iter)->mParent.reset();
                 mChildren.erase(iter);
 
                 DermaEvent event_child_removed;
@@ -127,11 +131,11 @@ namespace Orbis {
                 mOptions.end());
         }
 
-        Derma* GetParent() const {
-            return mParent;
+        std::shared_ptr<Derma> GetParent() const {
+            return mParent.lock();
         }
 
-        const std::vector<Derma*>& GetChildren() const {
+        const std::vector<std::shared_ptr<Derma>>& GetChildren() const {
             return mChildren;
         }
 
@@ -152,10 +156,12 @@ namespace Orbis {
         }
 
         sf::Vector2f GetPositionGlobal() const override {
-            if (mParent == nullptr)
+            auto parent = mParent.lock();
+
+            if (parent == nullptr)
                 return mPosition;
 
-            return mParent->GetPositionGlobal() + mPosition;
+            return parent->GetPositionGlobal() + mPosition;
         }
 
         size_t GetZLevel() const {
@@ -353,21 +359,18 @@ namespace Orbis {
     }
 
     void Derma::ProcessControls(const Controls& controls) {
-        sf::Vector2i pos_mouse = controls.GetMousePosition();
-        sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
-
-        mIsInBounds = IsInBounds(pos_mouse_f);
+        mIsInBounds = IsInBounds(controls.GetMousePosition());
 
         DermaEvent event_base;
 
         event_base.mPosition = GetPositionGlobal();
         event_base.mSize = mSize;
-        event_base.mPositionMouse = pos_mouse_f;
         event_base.mZLevel = mZLevel;
         event_base.mIsInBounds = mIsInBounds;
-        event_base.mIsLMousePressed = controls.GetIsLMousePressed();
-        event_base.mIsRMousePressed = controls.GetIsRMousePressed();
-        event_base.mIsWMousePressed = controls.GetIsWMousePressed();
+        event_base.mMouseState.mPosition = controls.GetMousePosition();
+        event_base.mMouseState.mIsLPressed = controls.GetIsLMousePressed();
+        event_base.mMouseState.mIsRPressed = controls.GetIsRMousePressed();
+        event_base.mMouseState.mIsWPressed = controls.GetIsWMousePressed();
         event_base.mIsVisible = mIsVisible;
 
         DermaEvent event_move = event_base;
@@ -375,7 +378,7 @@ namespace Orbis {
         event_move.mType = DermaEventType::MouseMove;
         mEventSystem.EmitEvent(event_move);
 
-        if ((event_base.mIsLMousePressed == true) && (mWasLMousePressed == false)) {
+        if ((event_base.mMouseState.mIsLPressed == true) && (mWasLMousePressed == false)) {
             DermaEvent event_mouse_down = event_base;
 
             event_mouse_down.mType = DermaEventType::MouseDown;
@@ -383,7 +386,7 @@ namespace Orbis {
 
             event_mouse_down.mType = DermaEventType::MouseLDown;
             mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mIsLMousePressed == false) && (mWasLMousePressed == true)) {
+        } else if ((event_base.mMouseState.mIsLPressed == false) && (mWasLMousePressed == true)) {
             DermaEvent event_mouse_up = event_base;
 
             event_mouse_up.mType = DermaEventType::MouseUp;
@@ -393,7 +396,7 @@ namespace Orbis {
             mEventSystem.EmitEvent(event_mouse_up);
         }
 
-        if ((event_base.mIsRMousePressed == true) && (mWasRMousePressed == false)) {
+        if ((event_base.mMouseState.mIsRPressed == true) && (mWasRMousePressed == false)) {
             DermaEvent event_mouse_down = event_base;
 
             event_mouse_down.mType = DermaEventType::MouseDown;
@@ -401,7 +404,7 @@ namespace Orbis {
 
             event_mouse_down.mType = DermaEventType::MouseRDown;
             mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mIsRMousePressed == false) && (mWasRMousePressed == true)) {
+        } else if ((event_base.mMouseState.mIsRPressed == false) && (mWasRMousePressed == true)) {
             DermaEvent event_mouse_up = event_base;
 
             event_mouse_up.mType = DermaEventType::MouseUp;
@@ -411,7 +414,7 @@ namespace Orbis {
             mEventSystem.EmitEvent(event_mouse_up);
         }
 
-        mWasLMousePressed = event_base.mIsLMousePressed;
-        mWasRMousePressed = event_base.mIsRMousePressed;
+        mWasLMousePressed = event_base.mMouseState.mIsLPressed;
+        mWasRMousePressed = event_base.mMouseState.mIsRPressed;
     }
 }

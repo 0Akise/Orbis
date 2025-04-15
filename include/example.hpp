@@ -38,13 +38,13 @@ namespace OrbisExample {
         }
 
         void Run(sf::RenderWindow& window) {
-            Derma& example_frame = UI::Create(DermaType::DFrame);
+            auto& example_frame = *UI::Create(DermaType::DFrame);
             example_frame.SetName("Main Frame")
                 .SetSize({100, 100})
                 .SetPosition({100, 100})
                 .SetDebugMode(true);
 
-            Derma& example_window = UI::Create(DermaType::DWindow);
+            auto& example_window = *UI::Create(DermaType::DWindow);
             example_window.SetName("Sub Menu")
                 .SetSize({300, 300})
                 .SetPosition({200, 200})

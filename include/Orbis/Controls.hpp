@@ -2,65 +2,60 @@
 
 #include <SFML/System.hpp>
 
+#include "Orbis/Data.hpp"
+
 namespace Orbis {
     class Controls {
     private:
-        sf::Vector2i mPositionMouse;
-        bool mIsLMousePressed;
-        bool mIsRMousePressed;
-        bool mIsWMousePressed;
-        bool mIsScrolling;
+        MouseState mMouseState;
 
     public:
-        Controls()
-            : mPositionMouse({0, 0}),
-              mIsLMousePressed(false),
-              mIsRMousePressed(false),
-              mIsWMousePressed(false),
-              mIsScrolling(false) {}
+        Controls() {}
 
         static Controls Create() {
             return Controls();
         }
 
-        sf::Vector2i GetMousePosition() const {
-            return mPositionMouse;
+        sf::Vector2f GetMousePosition() const {
+            return mMouseState.mPosition;
         }
 
         bool GetIsLMousePressed() const {
-            return mIsLMousePressed;
+            return mMouseState.mIsLPressed;
         }
 
         bool GetIsRMousePressed() const {
-            return mIsRMousePressed;
+            return mMouseState.mIsRPressed;
         }
 
         bool GetIsWMousePressed() const {
-            return mIsWMousePressed;
+            return mMouseState.mIsWPressed;
         }
 
         bool GetIsScrolling() const {
-            return mIsScrolling;
+            return mMouseState.mIsScrolling;
         }
 
-        void SetMousePosition(sf::Vector2i mouse_pos) {
-            mPositionMouse = mouse_pos;
+        void SetMousePosition(sf::Vector2i pos_mouse) {
+            sf::Vector2f pos_mouse_f = {static_cast<float>(pos_mouse.x), static_cast<float>(pos_mouse.y)};
+
+            mMouseState.mPosition = pos_mouse_f;
         }
 
         void SetIsLMousePressed(bool is_lmouse_pressed) {
-            mIsLMousePressed = is_lmouse_pressed;
+            mMouseState.mIsLPressed = is_lmouse_pressed;
         }
 
         void SetIsRMousePressed(bool is_rmouse_pressed) {
-            mIsRMousePressed = is_rmouse_pressed;
+            mMouseState.mIsRPressed = is_rmouse_pressed;
         }
 
         void SetIsWMousePressed(bool is_wmouse_pressed) {
-            mIsWMousePressed = is_wmouse_pressed;
+            mMouseState.mIsWPressed = is_wmouse_pressed;
         }
 
         void SetIsScrolling(bool is_scrolling) {
-            mIsScrolling = is_scrolling;
+            mMouseState.mIsScrolling = is_scrolling;
         }
     };
 }

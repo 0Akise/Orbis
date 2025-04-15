@@ -22,7 +22,7 @@ namespace Orbis {
         void EmitEvent(const DermaEvent& event) {
             auto iter = mListeners.find(event.mType);
 
-            if (iter != mListeners.end()) {
+            if ((iter != mListeners.end()) && (iter->second.empty() == false)) {
                 for (const auto& callback : iter->second) {
                     callback(event);
                 }

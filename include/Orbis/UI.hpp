@@ -13,7 +13,7 @@
 namespace Orbis {
     class UI {
     private:
-        std::vector<Derma> mDermas;
+        std::vector<std::shared_ptr<Derma>> mDermas;
         size_t mIDCounter;
 
     public:
@@ -27,26 +27,26 @@ namespace Orbis {
             return instance;
         }
 
-        Derma& Instance_Create(DermaType type, Derma* parent) {
-            Derma derma(type, mIDCounter++);
+        std::shared_ptr<Derma> Instance_Create(DermaType type, std::shared_ptr<Derma> parent) {
+            auto derma = Derma::Create(type, mIDCounter++);
 
-            derma.SetRegistered(true);
-            mDermas.push_back(std::move(derma));
+            derma->SetRegistered(true);
 
-            Derma& derma_ref = mDermas.back();
+            mDermas.push_back(derma);
 
-            if (parent != nullptr)
-                parent->AddChild(derma_ref);
+            if (parent) {
+                parent->AddChild(derma);
+            }
 
-            return derma_ref;
+            return derma;
         }
 
-        static Derma& Create(DermaType type) {
+        static std::shared_ptr<Derma> Create(DermaType type) {
             return GetUISystem().Instance_Create(type, nullptr);
         }
 
-        static Derma& Create(DermaType type, Derma& parent) {
-            return GetUISystem().Instance_Create(type, &parent);
+        static std::shared_ptr<Derma> Create(DermaType type, std::shared_ptr<Derma> parent) {
+            return GetUISystem().Instance_Create(type, parent);
         }
 
         void Instance_ShowDermaList() {
@@ -54,8 +54,8 @@ namespace Orbis {
             std::cout << "=====================\n";
 
             for (const auto& derma : mDermas) {
-                std::cout << "ID: " << derma.GetID() << "\t"
-                          << "Name: " << derma.GetName() << "\n";
+                std::cout << "ID: " << derma->GetID() << "\t"
+                          << "Name: " << derma->GetName() << "\n";
             }
 
             std::cout << std::endl;
@@ -67,7 +67,7 @@ namespace Orbis {
 
         void Instance_Update(const Controls& controls) {
             for (auto& derma : mDermas) {
-                derma.Update(controls);
+                derma->Update(controls);
             }
         }
 
@@ -77,7 +77,7 @@ namespace Orbis {
 
         void Instance_Render(sf::RenderWindow& window) {
             for (auto& derma : mDermas) {
-                derma.Render(window);
+                derma->Render(window);
             }
         }
 

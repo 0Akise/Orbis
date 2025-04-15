@@ -71,13 +71,13 @@ namespace Orbis {
                 if (*mIsInBounds == true) {
                     mIsMoved = true;
                     sf::Vector2f pos_global = mParent->GetPositionGlobal();
-                    mOffsetMoving = event.mPositionMouse - pos_global;
+                    mOffsetMoving = event.mMouseState.mPosition - pos_global;
                 }
             });
 
             event_system.RegisterListener(DermaEventType::MouseMove, [this, notify_ref](const DermaEvent& event) {
                 if (mIsMoved == true) {
-                    *mPosition = event.mPositionMouse - mOffsetMoving;
+                    *mPosition = event.mMouseState.mPosition - mOffsetMoving;
 
                     notify_ref(DermaEventType::Moved, mPosition);
                 }
@@ -132,18 +132,18 @@ namespace Orbis {
             };
 
             event_system.RegisterListener(DermaEventType::MouseRDown, [this, is_cursor_in_resize_handle](const DermaEvent& event) {
-                if (is_cursor_in_resize_handle(event.mPositionMouse) == true) {
+                if (is_cursor_in_resize_handle(event.mMouseState.mPosition) == true) {
                     mIsResized = true;
                     sf::Vector2f pos_global = mParent->GetPositionGlobal();
                     sf::Vector2f br_derma = pos_global + *mSize;
-                    mOffsetResizing = event.mPositionMouse - br_derma;
+                    mOffsetResizing = event.mMouseState.mPosition - br_derma;
                 }
             });
 
             event_system.RegisterListener(DermaEventType::MouseMove, [this, notify_ref](const DermaEvent& event) {
                 if (mIsResized == true) {
                     sf::Vector2f pos_global = mParent->GetPositionGlobal();
-                    sf::Vector2f size_new = (event.mPositionMouse - mOffsetResizing) - pos_global;
+                    sf::Vector2f size_new = (event.mMouseState.mPosition - mOffsetResizing) - pos_global;
 
                     size_new.x = std::max(size_new.x, mMinimumSize.x);
                     size_new.y = std::max(size_new.y, mMinimumSize.y);
