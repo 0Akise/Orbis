@@ -5,13 +5,13 @@
 #include <SFML/Graphics.hpp>
 
 namespace Orbis {
-    enum class DermaType {
+    enum class DType {
         DFrame,
         DWindow,
         DButton,
     };
 
-    enum class DermaOptionFlag : uint32_t {
+    enum class DOptionFlag : uint32_t {
         None = 0,
         Selectable = 1 << 0,
         Movable = 1 << 1,
@@ -20,7 +20,15 @@ namespace Orbis {
         Default = Selectable | Movable | Resizable
     };
 
-    enum class DermaEventType {
+    inline DOptionFlag operator|(DOptionFlag a, DOptionFlag b) {
+        return static_cast<DOptionFlag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+    }
+
+    inline DOptionFlag operator&(DOptionFlag a, DOptionFlag b) {
+        return static_cast<DOptionFlag>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+    }
+
+    enum class DEventType {
         MouseEnter,
         MouseLeave,
         MouseDown,
@@ -46,24 +54,21 @@ namespace Orbis {
         ChildRemoved
     };
 
-    inline DermaOptionFlag operator|(DermaOptionFlag a, DermaOptionFlag b) {
-        return static_cast<DermaOptionFlag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-    }
-
-    inline DermaOptionFlag operator&(DermaOptionFlag a, DermaOptionFlag b) {
-        return static_cast<DermaOptionFlag>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-    }
+    enum class DDrawingType {
+        Box,
+        Image,
+    };
 
     struct MouseState {
         sf::Vector2f mPosition = {0, 0};
-        bool mIsLPressed = false;
-        bool mIsRPressed = false;
-        bool mIsWPressed = false;
-        bool mIsScrolling = false;
+        bool mLPress = false;
+        bool mRPress = false;
+        bool mWPress = false;
+        bool mScroll = false;
     };
 
-    struct DermaEvent {
-        DermaEventType mType;
+    struct DEvent {
+        DEventType mType;
 
         sf::Vector2f mPosition;
         sf::Vector2f mSize;
@@ -75,6 +80,6 @@ namespace Orbis {
         bool mIsVisible;
     };
 
-    using EventCallback = std::function<void(const DermaEvent&)>;
-    using NotifyCallback = std::function<void(DermaEventType, const void*)>;
+    using EventCallback = std::function<void(const DEvent&)>;
+    using NotifyCallback = std::function<void(DEventType, const void*)>;
 }

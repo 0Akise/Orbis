@@ -15,7 +15,7 @@ namespace Orbis {
     public:
         virtual ~DermaOption() = default;
 
-        virtual void Initialize(EventSystem& event, NotifyCallback notify) = 0;
+        virtual void Initialize(DermaEventSystem& event, NotifyCallback notify) = 0;
         virtual void Update(const Controls&) {};
         virtual void Render(sf::RenderWindow&) {};
     };
@@ -35,8 +35,8 @@ namespace Orbis {
             return mIsSelected;
         }
 
-        void Initialize(EventSystem& event_system, NotifyCallback) override {
-            event_system.RegisterListener(DermaEventType::MouseDown, [this](const DermaEvent&) {
+        void Initialize(DermaEventSystem& event_system, NotifyCallback) override {
+            event_system.RegisterListener(DEventType::MouseDown, [this](const DEvent&) {
                 if (*mIsInBounds == true) {
                     mIsSelected = true;
                 } else {
@@ -64,10 +64,10 @@ namespace Orbis {
             return mIsMoved;
         }
 
-        void Initialize(EventSystem& event_system, NotifyCallback notify) override {
+        void Initialize(DermaEventSystem& event_system, NotifyCallback notify) override {
             auto notify_ref = notify;
 
-            event_system.RegisterListener(DermaEventType::MouseLDown, [this](const DermaEvent& event) {
+            event_system.RegisterListener(DEventType::MouseLDown, [this](const DEvent& event) {
                 if (*mIsInBounds == true) {
                     mIsMoved = true;
                     sf::Vector2f pos_global = mParent->GetPositionGlobal();
@@ -75,19 +75,19 @@ namespace Orbis {
                 }
             });
 
-            event_system.RegisterListener(DermaEventType::MouseMove, [this, notify_ref](const DermaEvent& event) {
+            event_system.RegisterListener(DEventType::MouseMove, [this, notify_ref](const DEvent& event) {
                 if (mIsMoved == true) {
                     *mPosition = event.mMouseState.mPosition - mOffsetMoving;
 
-                    notify_ref(DermaEventType::Moved, mPosition);
+                    notify_ref(DEventType::Moved, mPosition);
                 }
             });
 
-            event_system.RegisterListener(DermaEventType::MouseLUp, [this](const DermaEvent&) {
+            event_system.RegisterListener(DEventType::MouseLUp, [this](const DEvent&) {
                 mIsMoved = false;
             });
 
-            event_system.RegisterListener(DermaEventType::MouseUp, [this](const DermaEvent&) {
+            event_system.RegisterListener(DEventType::MouseUp, [this](const DEvent&) {
                 mIsMoved = false;
             });
         }
@@ -121,7 +121,7 @@ namespace Orbis {
             mMinimumSize = size;
         }
 
-        void Initialize(EventSystem& event_system, NotifyCallback notify) override {
+        void Initialize(DermaEventSystem& event_system, NotifyCallback notify) override {
             auto notify_ref = notify;
             auto is_cursor_in_resize_handle = [this](const sf::Vector2f& pos_mouse) -> bool {
                 sf::Vector2f br_derma = *mPosition + *mSize;
@@ -131,7 +131,7 @@ namespace Orbis {
                 return sf::Rect<float>(pos_handle, size_handle).contains(pos_mouse);
             };
 
-            event_system.RegisterListener(DermaEventType::MouseRDown, [this, is_cursor_in_resize_handle](const DermaEvent& event) {
+            event_system.RegisterListener(DEventType::MouseRDown, [this, is_cursor_in_resize_handle](const DEvent& event) {
                 if (is_cursor_in_resize_handle(event.mMouseState.mPosition) == true) {
                     mIsResized = true;
                     sf::Vector2f pos_global = mParent->GetPositionGlobal();
@@ -140,7 +140,7 @@ namespace Orbis {
                 }
             });
 
-            event_system.RegisterListener(DermaEventType::MouseMove, [this, notify_ref](const DermaEvent& event) {
+            event_system.RegisterListener(DEventType::MouseMove, [this, notify_ref](const DEvent& event) {
                 if (mIsResized == true) {
                     sf::Vector2f pos_global = mParent->GetPositionGlobal();
                     sf::Vector2f size_new = (event.mMouseState.mPosition - mOffsetResizing) - pos_global;
@@ -149,15 +149,15 @@ namespace Orbis {
                     size_new.y = std::max(size_new.y, mMinimumSize.y);
                     *mSize = size_new;
 
-                    notify_ref(DermaEventType::Resized, mSize);
+                    notify_ref(DEventType::Resized, mSize);
                 }
             });
 
-            event_system.RegisterListener(DermaEventType::MouseRUp, [this](const DermaEvent&) {
+            event_system.RegisterListener(DEventType::MouseRUp, [this](const DEvent&) {
                 mIsResized = false;
             });
 
-            event_system.RegisterListener(DermaEventType::MouseUp, [this](const DermaEvent&) {
+            event_system.RegisterListener(DEventType::MouseUp, [this](const DEvent&) {
                 mIsResized = false;
             });
         }

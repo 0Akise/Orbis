@@ -10,16 +10,16 @@
 #include "Orbis/Data.hpp"
 
 namespace Orbis {
-    class EventSystem {
+    class DermaEventSystem {
     private:
-        std::unordered_map<DermaEventType, std::vector<EventCallback>> mListeners;
+        std::unordered_map<DEventType, std::vector<EventCallback>> mListeners;
 
     public:
-        void RegisterListener(DermaEventType event_type, EventCallback callback) {
+        void RegisterListener(DEventType event_type, EventCallback callback) {
             mListeners[event_type].push_back(std::move(callback));
         }
 
-        void EmitEvent(const DermaEvent& event) {
+        void EmitEvent(const DEvent& event) {
             auto iter = mListeners.find(event.mType);
 
             if ((iter != mListeners.end()) && (iter->second.empty() == false)) {

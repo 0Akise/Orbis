@@ -38,18 +38,21 @@ namespace OrbisExample {
         }
 
         void Run(sf::RenderWindow& window) {
-            auto& example_frame = *UI::Create(DermaType::DFrame);
-            example_frame.SetName("Main Frame")
-                .SetSize({100, 100})
-                .SetPosition({100, 100})
-                .SetDebugMode(true);
+            sf::Vector2f screen_size({1080.0f, 720.0f});
 
-            auto& example_window = *UI::Create(DermaType::DWindow);
+            auto& example_hud = *UI::Create(DType::DFrame);
+            example_hud.SetName("Main Frame")
+                .SetSize({400.0f, 200.0f})
+                .SetPosition({0.0f, screen_size.y - 200.0f})
+                .DrawBox({380.0f, 180.0f}, {10.0f, 10.0f}, 0, sf::Color({255, 255, 255, 255}))
+                .DrawBox({380.0f, 30.0f}, {10.0f, 10.0f}, 1, sf::Color({0, 180, 255, 255}));
+
+            auto& example_window = *UI::Create(DType::DWindow);
             example_window.SetName("Sub Menu")
                 .SetSize({300, 300})
                 .SetPosition({200, 200})
                 .SetDebugMode(true)
-                .SetOptions(DermaOptionFlag::Default);
+                .SetOptions(DOptionFlag::Default);
 
             UI::ShowDermaList();
 

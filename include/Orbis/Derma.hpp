@@ -10,6 +10,7 @@
 
 #include "Orbis/Controls.hpp"
 #include "Orbis/Data.hpp"
+#include "Orbis/DermaDrawing.hpp"
 #include "Orbis/DermaEvent.hpp"
 #include "Orbis/DermaInterface.hpp"
 #include "Orbis/DermaOption.hpp"
@@ -26,10 +27,11 @@ namespace Orbis {
         sf::Vector2f mPosition;
         size_t mZLevel;
 
-        EventSystem mEventSystem;
+        std::vector<DermaDrawing> mDrawings;
 
-        bool mWasLMousePressed;
-        bool mWasRMousePressed;
+        DermaEventSystem mEventSystem;
+        MouseState mMousePrevious;
+
         bool mIsVisible;
         bool mIsRegistered;
         bool mIsInBounds;
@@ -42,20 +44,18 @@ namespace Orbis {
         bool mIsDebugMode;
 
     public:
-        Derma(DermaType, size_t id)
+        Derma(DType, size_t id)
             : mID(id),
               mName("Unnamed"),
               mSize({0.0f, 0.0f}),
               mPosition({0.0f, 0.0f}),
               mZLevel(0),
-              mWasLMousePressed(false),
-              mWasRMousePressed(false),
               mIsVisible(true),
               mIsRegistered(false),
               mIsInBounds(false),
               mIsDebugMode(false) {}
 
-        static std::shared_ptr<Derma> Create(DermaType type, size_t id) {
+        static std::shared_ptr<Derma> Create(DType type, size_t id) {
             return std::make_shared<Derma>(type, id);
         }
 
@@ -67,12 +67,12 @@ namespace Orbis {
             child->mParent = shared_from_this();
             mChildren.push_back(std::move(child));
 
-            DermaEvent event_parent_changed;
-            event_parent_changed.mType = DermaEventType::ParentChanged;
+            DEvent event_parent_changed;
+            event_parent_changed.mType = DEventType::ParentChanged;
             mEventSystem.EmitEvent(event_parent_changed);
 
-            DermaEvent event_child_added;
-            event_child_added.mType = DermaEventType::ChildAdded;
+            DEvent event_child_added;
+            event_child_added.mType = DEventType::ChildAdded;
             mEventSystem.EmitEvent(event_child_added);
         }
 
@@ -83,8 +83,8 @@ namespace Orbis {
                 (*iter)->mParent.reset();
                 mChildren.erase(iter);
 
-                DermaEvent event_child_removed;
-                event_child_removed.mType = DermaEventType::ChildRemoved;
+                DEvent event_child_removed;
+                event_child_removed.mType = DEventType::ChildRemoved;
                 mEventSystem.EmitEvent(event_child_removed);
             }
         }
@@ -92,12 +92,12 @@ namespace Orbis {
         template <typename T, typename... Args>
         std::shared_ptr<T> AddOption(Args&&... args) {
             auto option = std::make_shared<T>(*this, std::forward<Args>(args)...);
-            auto notify = [this](DermaEventType type, const void* data) {
-                DermaEvent event;
+            auto notify = [this](DEventType type, const void* data) {
+                DEvent event;
 
                 event.mType = type;
 
-                if (type == DermaEventType::Moved) {
+                if (type == DEventType::Moved) {
                     event.mPosition = *static_cast<const sf::Vector2f*>(data);
                 }
 
@@ -208,9 +208,9 @@ namespace Orbis {
         Derma& SetPosition(sf::Vector2f position) {
             mPosition = position;
 
-            DermaEvent event_moved;
+            DEvent event_moved;
 
-            event_moved.mType = DermaEventType::Moved;
+            event_moved.mType = DEventType::Moved;
             event_moved.mPosition = position;
             mEventSystem.EmitEvent(event_moved);
 
@@ -241,16 +241,16 @@ namespace Orbis {
             return *this;
         }
 
-        Derma& SetOptions(DermaOptionFlag flags) {
-            bool has_selectable = HasFlag(flags, DermaOptionFlag::Selectable);
+        Derma& SetOptions(DOptionFlag flags) {
+            bool has_selectable = HasOptionFlag(flags, DOptionFlag::Selectable);
 
             SetSelectable(has_selectable);
 
-            bool has_movable = HasFlag(flags, DermaOptionFlag::Movable);
+            bool has_movable = HasOptionFlag(flags, DOptionFlag::Movable);
 
             SetMovable(has_movable);
 
-            bool has_resizable = HasFlag(flags, DermaOptionFlag::Resizable);
+            bool has_resizable = HasOptionFlag(flags, DOptionFlag::Resizable);
 
             SetResizable(has_resizable);
 
@@ -315,13 +315,26 @@ namespace Orbis {
             return false;
         }
 
-        bool HasFlag(DermaOptionFlag flags, DermaOptionFlag flag) const {
+        bool HasOptionFlag(DOptionFlag flags, DOptionFlag flag) const {
             return (flags & flag) == flag;
         }
 
         void Update(const Controls& controls);
         void Render(sf::RenderWindow& window);
         void ProcessControls(const Controls& controls);
+        void ProcessDrawings(sf::RenderWindow& window, const DermaDrawing& drawing, const sf::Vector2f& pos_global);
+        void ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global);
+
+        Derma& DrawBox(
+            sf::Vector2f size,
+            sf::Vector2f position,
+            size_t zlevel,
+            sf::Color fill_color,
+            bool is_outlined = false,
+            float outline_thickness = 0.0f,
+            sf::Color outline_color = sf::Color::Black,
+            bool is_rounded = false,
+            float rounding_radius = 0.0f);
     };
 }
 
@@ -343,14 +356,12 @@ namespace Orbis {
 
         sf::Vector2f pos_global = GetPositionGlobal();
 
-        if (mIsDebugMode == true) {
-            sf::RectangleShape rect(mSize);
-            rect.setPosition(pos_global);
-            rect.setFillColor(sf::Color(255, 255, 255, 128));
-            rect.setOutlineColor(sf::Color::White);
-            rect.setOutlineThickness(1.0f);
+        for (const auto& drawing : mDrawings) {
+            ProcessDrawings(window, drawing, pos_global);
+        }
 
-            window.draw(rect);
+        if (mIsDebugMode == true) {
+            ProcessDebugMode(window, pos_global);
         }
 
         for (auto& option : mOptions) {
@@ -361,60 +372,142 @@ namespace Orbis {
     void Derma::ProcessControls(const Controls& controls) {
         mIsInBounds = IsInBounds(controls.GetMousePosition());
 
-        DermaEvent event_base;
+        DEvent event_base;
 
         event_base.mPosition = GetPositionGlobal();
         event_base.mSize = mSize;
         event_base.mZLevel = mZLevel;
         event_base.mIsInBounds = mIsInBounds;
         event_base.mMouseState.mPosition = controls.GetMousePosition();
-        event_base.mMouseState.mIsLPressed = controls.GetIsLMousePressed();
-        event_base.mMouseState.mIsRPressed = controls.GetIsRMousePressed();
-        event_base.mMouseState.mIsWPressed = controls.GetIsWMousePressed();
+        event_base.mMouseState.mLPress = controls.GetIsLMousePressed();
+        event_base.mMouseState.mRPress = controls.GetIsRMousePressed();
+        event_base.mMouseState.mWPress = controls.GetIsWMousePressed();
         event_base.mIsVisible = mIsVisible;
 
-        DermaEvent event_move = event_base;
+        DEvent event_move = event_base;
 
-        event_move.mType = DermaEventType::MouseMove;
+        event_move.mType = DEventType::MouseMove;
         mEventSystem.EmitEvent(event_move);
 
-        if ((event_base.mMouseState.mIsLPressed == true) && (mWasLMousePressed == false)) {
-            DermaEvent event_mouse_down = event_base;
+        if ((event_base.mMouseState.mLPress == true) && (mMousePrevious.mLPress == false)) {
+            DEvent event_mouse_down = event_base;
 
-            event_mouse_down.mType = DermaEventType::MouseDown;
+            event_mouse_down.mType = DEventType::MouseDown;
             mEventSystem.EmitEvent(event_mouse_down);
 
-            event_mouse_down.mType = DermaEventType::MouseLDown;
+            event_mouse_down.mType = DEventType::MouseLDown;
             mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mMouseState.mIsLPressed == false) && (mWasLMousePressed == true)) {
-            DermaEvent event_mouse_up = event_base;
+        } else if ((event_base.mMouseState.mLPress == false) && (mMousePrevious.mLPress == true)) {
+            DEvent event_mouse_up = event_base;
 
-            event_mouse_up.mType = DermaEventType::MouseUp;
+            event_mouse_up.mType = DEventType::MouseUp;
             mEventSystem.EmitEvent(event_mouse_up);
 
-            event_mouse_up.mType = DermaEventType::MouseLUp;
-            mEventSystem.EmitEvent(event_mouse_up);
-        }
-
-        if ((event_base.mMouseState.mIsRPressed == true) && (mWasRMousePressed == false)) {
-            DermaEvent event_mouse_down = event_base;
-
-            event_mouse_down.mType = DermaEventType::MouseDown;
-            mEventSystem.EmitEvent(event_mouse_down);
-
-            event_mouse_down.mType = DermaEventType::MouseRDown;
-            mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mMouseState.mIsRPressed == false) && (mWasRMousePressed == true)) {
-            DermaEvent event_mouse_up = event_base;
-
-            event_mouse_up.mType = DermaEventType::MouseUp;
-            mEventSystem.EmitEvent(event_mouse_up);
-
-            event_mouse_up.mType = DermaEventType::MouseRUp;
+            event_mouse_up.mType = DEventType::MouseLUp;
             mEventSystem.EmitEvent(event_mouse_up);
         }
 
-        mWasLMousePressed = event_base.mMouseState.mIsLPressed;
-        mWasRMousePressed = event_base.mMouseState.mIsRPressed;
+        if ((event_base.mMouseState.mRPress == true) && (mMousePrevious.mRPress == false)) {
+            DEvent event_mouse_down = event_base;
+
+            event_mouse_down.mType = DEventType::MouseDown;
+            mEventSystem.EmitEvent(event_mouse_down);
+
+            event_mouse_down.mType = DEventType::MouseRDown;
+            mEventSystem.EmitEvent(event_mouse_down);
+        } else if ((event_base.mMouseState.mRPress == false) && (mMousePrevious.mRPress == true)) {
+            DEvent event_mouse_up = event_base;
+
+            event_mouse_up.mType = DEventType::MouseUp;
+            mEventSystem.EmitEvent(event_mouse_up);
+
+            event_mouse_up.mType = DEventType::MouseRUp;
+            mEventSystem.EmitEvent(event_mouse_up);
+        }
+
+        mMousePrevious.mLPress = event_base.mMouseState.mLPress;
+        mMousePrevious.mRPress = event_base.mMouseState.mRPress;
+    }
+
+    void Derma::ProcessDrawings(sf::RenderWindow& window, const DermaDrawing& drawing, const sf::Vector2f& pos_global) {
+        sf::Vector2f pos_drawing = pos_global + drawing.mPosition;
+
+        switch (drawing.mType) {
+            case DDrawingType::Box: {
+                if (drawing.mIsRounded == true) {
+                    // SFMLExt::RoundedRectangleShape is not implemented yet
+                    sf::RectangleShape _shape(drawing.mSize);
+
+                    _shape.setPosition(pos_drawing);
+                    _shape.setFillColor(drawing.mFillColor);
+
+                    if (drawing.mIsOutlined == true) {
+                        _shape.setOutlineThickness(drawing.mOutlineThickness);
+                        _shape.setOutlineColor(drawing.mOutlineColor);
+                    }
+
+                    window.draw(_shape);
+
+                    break;
+                } else {
+                    sf::RectangleShape _shape(drawing.mSize);
+
+                    _shape.setPosition(pos_drawing);
+                    _shape.setFillColor(drawing.mFillColor);
+
+                    if (drawing.mIsOutlined == true) {
+                        _shape.setOutlineThickness(drawing.mOutlineThickness);
+                        _shape.setOutlineColor(drawing.mOutlineColor);
+                    }
+
+                    window.draw(_shape);
+
+                    break;
+                }
+            }
+
+            case DDrawingType::Image: {
+                // Do stuff for image drawing
+                break;
+            }
+        }
+    }
+
+    void Derma::ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global) {
+        sf::RectangleShape rect(mSize);
+
+        rect.setPosition(pos_global);
+        rect.setFillColor(sf::Color(255, 255, 255, 128));
+        rect.setOutlineColor(sf::Color::White);
+        rect.setOutlineThickness(1.0f);
+
+        window.draw(rect);
+    }
+
+    Derma& Derma::DrawBox(
+        sf::Vector2f size,
+        sf::Vector2f position,
+        size_t zlevel,
+        sf::Color fill_color,
+        bool is_outlined,
+        float outline_thickness,
+        sf::Color outline_color,
+        bool is_rounded,
+        float rounding_radius) {
+        DermaDrawing drawing;
+
+        drawing.mType = DDrawingType::Box;
+        drawing.mSize = size;
+        drawing.mPosition = position;
+        drawing.mZLevel = zlevel;
+        drawing.mFillColor = fill_color;
+        drawing.mIsOutlined = is_outlined;
+        drawing.mOutlineThickness = outline_thickness;
+        drawing.mOutlineColor = outline_color;
+        drawing.mIsRounded = is_rounded;
+        drawing.mRoundingRadius = rounding_radius;
+        mDrawings.push_back(drawing);
+
+        return *this;
     }
 }

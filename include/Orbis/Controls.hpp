@@ -21,19 +21,19 @@ namespace Orbis {
         }
 
         bool GetIsLMousePressed() const {
-            return mMouseState.mIsLPressed;
+            return mMouseState.mLPress;
         }
 
         bool GetIsRMousePressed() const {
-            return mMouseState.mIsRPressed;
+            return mMouseState.mRPress;
         }
 
         bool GetIsWMousePressed() const {
-            return mMouseState.mIsWPressed;
+            return mMouseState.mWPress;
         }
 
         bool GetIsScrolling() const {
-            return mMouseState.mIsScrolling;
+            return mMouseState.mScroll;
         }
 
         void SetMousePosition(sf::Vector2i pos_mouse) {
@@ -43,19 +43,19 @@ namespace Orbis {
         }
 
         void SetIsLMousePressed(bool is_lmouse_pressed) {
-            mMouseState.mIsLPressed = is_lmouse_pressed;
+            mMouseState.mLPress = is_lmouse_pressed;
         }
 
         void SetIsRMousePressed(bool is_rmouse_pressed) {
-            mMouseState.mIsRPressed = is_rmouse_pressed;
+            mMouseState.mRPress = is_rmouse_pressed;
         }
 
         void SetIsWMousePressed(bool is_wmouse_pressed) {
-            mMouseState.mIsWPressed = is_wmouse_pressed;
+            mMouseState.mWPress = is_wmouse_pressed;
         }
 
         void SetIsScrolling(bool is_scrolling) {
-            mMouseState.mIsScrolling = is_scrolling;
+            mMouseState.mScroll = is_scrolling;
         }
     };
 }

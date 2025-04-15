@@ -27,7 +27,7 @@ namespace Orbis {
             return instance;
         }
 
-        std::shared_ptr<Derma> Instance_Create(DermaType type, std::shared_ptr<Derma> parent) {
+        std::shared_ptr<Derma> Instance_Create(DType type, std::shared_ptr<Derma> parent) {
             auto derma = Derma::Create(type, mIDCounter++);
 
             derma->SetRegistered(true);
@@ -41,11 +41,11 @@ namespace Orbis {
             return derma;
         }
 
-        static std::shared_ptr<Derma> Create(DermaType type) {
+        static std::shared_ptr<Derma> Create(DType type) {
             return GetUISystem().Instance_Create(type, nullptr);
         }
 
-        static std::shared_ptr<Derma> Create(DermaType type, std::shared_ptr<Derma> parent) {
+        static std::shared_ptr<Derma> Create(DType type, std::shared_ptr<Derma> parent) {
             return GetUISystem().Instance_Create(type, parent);
         }
 
