@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -27,7 +28,7 @@ namespace Orbis {
         sf::Vector2f mPosition;
         size_t mZLevel;
 
-        std::vector<DermaDrawing> mDrawings;
+        std::multimap<size_t, DermaDrawing> mDrawings;
 
         DermaEventSystem mEventSystem;
         MouseState mMousePrevious;
@@ -91,14 +92,20 @@ namespace Orbis {
 
         template <typename T, typename... Args>
         std::shared_ptr<T> AddOption(Args&&... args) {
-            auto option = std::make_shared<T>(*this, std::forward<Args>(args)...);
+            auto option = std::make_shared<T>(shared_from_this(), std::forward<Args>(args)...);
             auto notify = [this](DEventType type, const void* data) {
                 DEvent event;
 
                 event.mType = type;
 
                 if (type == DEventType::Moved) {
-                    event.mPosition = *static_cast<const sf::Vector2f*>(data);
+                    const sf::Vector2f* position = static_cast<const sf::Vector2f*>(data);
+                    event.mPosition = *position;
+                    mPosition = *position;
+                } else if (type == DEventType::Resized) {
+                    const sf::Vector2f* size = static_cast<const sf::Vector2f*>(data);
+                    event.mSize = *size;
+                    mSize = *size;
                 }
 
                 mEventSystem.EmitEvent(event);
@@ -201,6 +208,12 @@ namespace Orbis {
 
         Derma& SetSize(sf::Vector2f size) {
             mSize = size;
+
+            DEvent event_resized;
+
+            event_resized.mType = DEventType::Resized;
+            event_resized.mSize = size;
+            mEventSystem.EmitEvent(event_resized);
 
             return *this;
         }
@@ -356,7 +369,7 @@ namespace Orbis {
 
         sf::Vector2f pos_global = GetPositionGlobal();
 
-        for (const auto& drawing : mDrawings) {
+        for (const auto& [zlevel, drawing] : mDrawings) {
             ProcessDrawings(window, drawing, pos_global);
         }
 
@@ -371,6 +384,14 @@ namespace Orbis {
 
     void Derma::ProcessControls(const Controls& controls) {
         mIsInBounds = IsInBounds(controls.GetMousePosition());
+
+        if (auto selectable = mOptionSelectable.lock()) {
+            selectable->SetInBoundsStatus(mIsInBounds);
+        }
+        
+        if (auto movable = mOptionMovable.lock()) {
+            movable->SetInBoundsStatus(mIsInBounds);
+        }
 
         DEvent event_base;
 
@@ -392,16 +413,10 @@ namespace Orbis {
         if ((event_base.mMouseState.mLPress == true) && (mMousePrevious.mLPress == false)) {
             DEvent event_mouse_down = event_base;
 
-            event_mouse_down.mType = DEventType::MouseDown;
-            mEventSystem.EmitEvent(event_mouse_down);
-
             event_mouse_down.mType = DEventType::MouseLDown;
             mEventSystem.EmitEvent(event_mouse_down);
         } else if ((event_base.mMouseState.mLPress == false) && (mMousePrevious.mLPress == true)) {
             DEvent event_mouse_up = event_base;
-
-            event_mouse_up.mType = DEventType::MouseUp;
-            mEventSystem.EmitEvent(event_mouse_up);
 
             event_mouse_up.mType = DEventType::MouseLUp;
             mEventSystem.EmitEvent(event_mouse_up);
@@ -410,16 +425,10 @@ namespace Orbis {
         if ((event_base.mMouseState.mRPress == true) && (mMousePrevious.mRPress == false)) {
             DEvent event_mouse_down = event_base;
 
-            event_mouse_down.mType = DEventType::MouseDown;
-            mEventSystem.EmitEvent(event_mouse_down);
-
             event_mouse_down.mType = DEventType::MouseRDown;
             mEventSystem.EmitEvent(event_mouse_down);
         } else if ((event_base.mMouseState.mRPress == false) && (mMousePrevious.mRPress == true)) {
             DEvent event_mouse_up = event_base;
-
-            event_mouse_up.mType = DEventType::MouseUp;
-            mEventSystem.EmitEvent(event_mouse_up);
 
             event_mouse_up.mType = DEventType::MouseRUp;
             mEventSystem.EmitEvent(event_mouse_up);
@@ -506,7 +515,7 @@ namespace Orbis {
         drawing.mOutlineColor = outline_color;
         drawing.mIsRounded = is_rounded;
         drawing.mRoundingRadius = rounding_radius;
-        mDrawings.push_back(drawing);
+        mDrawings.emplace(zlevel, drawing);
 
         return *this;
     }
