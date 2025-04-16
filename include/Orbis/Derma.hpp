@@ -154,7 +154,7 @@ namespace Orbis {
             return mName;
         }
 
-        sf::Vector2f GetSize() const {
+        sf::Vector2f GetSize() const override {
             return mSize;
         }
 
@@ -272,7 +272,7 @@ namespace Orbis {
 
         void SetSelectable(bool is_selectable) {
             if ((is_selectable == true) && (mOptionSelectable.expired() == true)) {
-                mOptionSelectable = AddOption<Selectable>(mIsInBounds);
+                mOptionSelectable = AddOption<Selectable>();
             } else if ((is_selectable == false) && (mOptionSelectable.expired() == false)) {
                 RemoveOption<Selectable>();
             }
@@ -280,7 +280,7 @@ namespace Orbis {
 
         void SetMovable(bool is_movable) {
             if ((is_movable == true) && (mOptionMovable.expired() == true)) {
-                mOptionMovable = AddOption<Movable>(mPosition, mIsInBounds);
+                mOptionMovable = AddOption<Movable>(mPosition);
             } else if ((is_movable == false) && (mOptionMovable.expired() == false)) {
                 RemoveOption<Movable>();
             }
@@ -384,14 +384,6 @@ namespace Orbis {
 
     void Derma::ProcessControls(const Controls& controls) {
         mIsInBounds = IsInBounds(controls.GetMousePosition());
-
-        if (auto selectable = mOptionSelectable.lock()) {
-            selectable->SetInBoundsStatus(mIsInBounds);
-        }
-        
-        if (auto movable = mOptionMovable.lock()) {
-            movable->SetInBoundsStatus(mIsInBounds);
-        }
 
         DEvent event_base;
 

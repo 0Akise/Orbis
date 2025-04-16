@@ -9,5 +9,6 @@ namespace Orbis {
         virtual ~DermaInterface() = default;
 
         virtual sf::Vector2f GetPositionGlobal() const = 0;
+        virtual sf::Vector2f GetSize() const = 0;
     };
 }

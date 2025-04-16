@@ -24,24 +24,19 @@ namespace Orbis {
     private:
         [[maybe_unused]] std::weak_ptr<DermaInterface> mParent;
         bool mIsSelected;
-        bool mIsInBounds;
 
     public:
         explicit Selectable(
-            std::shared_ptr<DermaInterface> derma, bool is_in_bounds)
-            : mParent(derma), mIsSelected(false), mIsInBounds(is_in_bounds) {}
+            std::shared_ptr<DermaInterface> derma)
+            : mParent(derma), mIsSelected(false) {}
 
         bool GetSelectedStatus() const {
             return mIsSelected;
         }
 
-        void SetInBoundsStatus(bool is_in_bounds) {
-            mIsInBounds = is_in_bounds;
-        }
-
         void Initialize(DermaEventSystem& event_system, NotifyCallback) override {
-            event_system.RegisterListener(DEventType::MouseDown, [this](const DEvent&) {
-                if (mIsInBounds == true) {
+            event_system.RegisterListener(DEventType::MouseDown, [this](const DEvent& event) {
+                if (event.mIsInBounds == true) {
                     mIsSelected = true;
                 } else {
                     mIsSelected = false;
@@ -56,30 +51,24 @@ namespace Orbis {
         sf::Vector2f mPosition;
         sf::Vector2f mOffsetMoving;
         bool mIsMoved;
-        bool mIsInBounds;
 
     public:
-        explicit Movable(std::shared_ptr<DermaInterface> derma, sf::Vector2f position, bool is_in_bounds)
-            : mParent(derma), mPosition(position), mIsMoved(false), mIsInBounds(is_in_bounds) {}
+        explicit Movable(std::shared_ptr<DermaInterface> derma, sf::Vector2f position)
+            : mParent(derma), mPosition(position), mIsMoved(false) {}
 
         bool GetMovedStatus() const {
             return mIsMoved;
-        }
-
-        void SetInBoundsStatus(bool is_in_bounds) {
-            mIsInBounds = is_in_bounds;
         }
 
         void Initialize(DermaEventSystem& event_system, NotifyCallback notify) override {
             auto notify_ref = notify;
 
             event_system.RegisterListener(DEventType::MouseLDown, [this](const DEvent& event) {
-                if (mIsInBounds == true) {
+                if (event.mIsInBounds == true) {
                     mIsMoved = true;
 
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        sf::Vector2f pos_global = parent->GetPositionGlobal();
-                        mOffsetMoving = event.mMouseState.mPosition - pos_global;
+                        mOffsetMoving = event.mMouseState.mPosition - event.mPosition;
                     }
                 }
             });
@@ -87,8 +76,7 @@ namespace Orbis {
             event_system.RegisterListener(DEventType::MouseMove, [this, notify_ref](const DEvent& event) {
                 if (mIsMoved == true) {
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        sf::Vector2f pos_global = parent->GetPositionGlobal();
-                        mPosition = event.mMouseState.mPosition - pos_global;
+                        mPosition = event.mMouseState.mPosition - mOffsetMoving;
 
                         notify_ref(DEventType::Moved, &mPosition);
                     }
@@ -129,27 +117,17 @@ namespace Orbis {
 
         void Initialize(DermaEventSystem& event_system, NotifyCallback notify) override {
             auto notify_ref = notify;
-            auto is_cursor_in_resize_handle = [this](const sf::Vector2f& pos_mouse) -> bool {
-                if (auto parent = mParent.lock(); parent != nullptr) {
-                    sf::Vector2f pos_global = parent->GetPositionGlobal();
-                    sf::Vector2f br_derma = pos_global + mSize;
-                    sf::Vector2f size_handle = {10.0f, 10.0f};
-                    sf::Vector2f pos_handle = {br_derma.x - size_handle.x, br_derma.y - size_handle.y};
 
-                    return sf::Rect<float>(pos_handle, size_handle).contains(pos_mouse);
-                }
+            event_system.RegisterListener(DEventType::MouseRDown, [this](const DEvent& event) {
+                sf::Vector2f window_br = event.mPosition + event.mSize;
+                sf::Vector2f size_handle = {10.0f, 10.0f};
+                sf::Vector2f pos_handle = {window_br.x - 10.0f, window_br.y - 10.0f};
 
-                return false;
-            };
-
-            event_system.RegisterListener(DEventType::MouseRDown, [this, is_cursor_in_resize_handle](const DEvent& event) {
-                if (is_cursor_in_resize_handle(event.mMouseState.mPosition) == true) {
+                if (sf::Rect<float>(pos_handle, size_handle).contains(event.mMouseState.mPosition) == true) {
                     mIsResized = true;
 
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        sf::Vector2f pos_global = parent->GetPositionGlobal();
-                        sf::Vector2f br_derma = pos_global + mSize;
-                        mOffsetResizing = event.mMouseState.mPosition - br_derma;
+                        mOffsetResizing = event.mMouseState.mPosition - window_br;
                     }
                 }
             });
@@ -157,8 +135,8 @@ namespace Orbis {
             event_system.RegisterListener(DEventType::MouseMove, [this, notify_ref](const DEvent& event) {
                 if (mIsResized == true) {
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        sf::Vector2f pos_global = parent->GetPositionGlobal();
-                        sf::Vector2f size_new = (event.mMouseState.mPosition - mOffsetResizing) - pos_global;
+                        sf::Vector2f pos_new_br = event.mMouseState.mPosition - mOffsetResizing;
+                        sf::Vector2f size_new = pos_new_br - event.mPosition;
 
                         size_new.x = std::max(size_new.x, mMinimumSize.x);
                         size_new.y = std::max(size_new.y, mMinimumSize.y);
