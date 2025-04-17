@@ -28,7 +28,7 @@ namespace Orbis {
         sf::Vector2f mPosition;
         size_t mZLevel;
 
-        std::multimap<size_t, DermaDrawings> mDrawings;
+        std::multimap<size_t, std::shared_ptr<DermaDrawings>> mDrawings;
 
         DermaEventSystem mEventSystem;
         MouseState mMousePrevious;
@@ -335,7 +335,7 @@ namespace Orbis {
         void Update(const Controls& controls);
         void Render(sf::RenderWindow& window);
         void ProcessControls(const Controls& controls);
-        void ProcessDrawings(sf::RenderWindow& window, const DermaDrawings& drawing, const sf::Vector2f& pos_global);
+        void ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global);
         void ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global);
 
         Derma& DrawRect(
@@ -350,12 +350,11 @@ namespace Orbis {
             float rounding_radius = 0.0f);
 
         Derma& DrawText(
-            sf::Vector2f size,
+            size_t font_size,
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
 
-            size_t font_size = 12,
             std::string text = "");
     };
 }
@@ -439,41 +438,56 @@ namespace Orbis {
         mMousePrevious.mRPress = event_base.mMouseState.mRPress;
     }
 
-    void Derma::ProcessDrawings(sf::RenderWindow& window, const DermaDrawings& drawing, const sf::Vector2f& pos_global) {
-        sf::Vector2f pos_drawing = pos_global + drawing.mPosition;
+    void Derma::ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global) {
+        sf::Vector2f pos_drawing = pos_global + drawing->mPosition;
 
-        switch (drawing.mType) {
-            case DDrawingsType::Box: {
-                if (drawing.mIsRounded == true) {
+        switch (drawing->mType) {
+            case DDrawingsType::Rect: {
+                auto drawing_rect = std::static_pointer_cast<DrawingsRect>(drawing);
+
+                if (drawing_rect->mIsRounded == true) {
                     // SFMLExt::RoundedRectangleShape is not implemented yet
-                    sf::RectangleShape _shape(drawing.mSize);
+                    sf::RectangleShape shape(drawing_rect->mSize);
 
-                    _shape.setPosition(pos_drawing);
-                    _shape.setFillColor(drawing.mFillColor);
+                    shape.setPosition(pos_drawing);
+                    shape.setFillColor(drawing_rect->mFillColor);
 
-                    if (drawing.mIsOutlined == true) {
-                        _shape.setOutlineThickness(drawing.mOutlineThickness);
-                        _shape.setOutlineColor(drawing.mOutlineColor);
+                    if (drawing_rect->mIsOutlined == true) {
+                        shape.setOutlineThickness(drawing_rect->mOutlineThickness);
+                        shape.setOutlineColor(drawing_rect->mOutlineColor);
                     }
 
-                    window.draw(_shape);
+                    window.draw(shape);
 
                     break;
                 } else {
-                    sf::RectangleShape _shape(drawing.mSize);
+                    sf::RectangleShape shape(drawing_rect->mSize);
 
-                    _shape.setPosition(pos_drawing);
-                    _shape.setFillColor(drawing.mFillColor);
+                    shape.setPosition(pos_drawing);
+                    shape.setFillColor(drawing_rect->mFillColor);
 
-                    if (drawing.mIsOutlined == true) {
-                        _shape.setOutlineThickness(drawing.mOutlineThickness);
-                        _shape.setOutlineColor(drawing.mOutlineColor);
+                    if (drawing_rect->mIsOutlined == true) {
+                        shape.setOutlineThickness(drawing_rect->mOutlineThickness);
+                        shape.setOutlineColor(drawing_rect->mOutlineColor);
                     }
 
-                    window.draw(_shape);
+                    window.draw(shape);
 
                     break;
                 }
+            }
+
+            case DDrawingsType::Text: {
+                auto drawing_text = std::static_pointer_cast<DrawingsText>(drawing);
+                sf::Font font("./res/font.ttf");
+                sf::Text text(font, drawing_text->mText, drawing_text->mFontSize);
+
+                text.setPosition(pos_drawing);
+                text.setFillColor(drawing_text->mFillColor);
+
+                window.draw(text);
+
+                break;
             }
 
             case DDrawingsType::Image: {
@@ -504,19 +518,38 @@ namespace Orbis {
         sf::Color outline_color,
         bool is_rounded,
         float rounding_radius) {
-        DrawingsRect rect;
+        auto drawing = std::make_shared<DrawingsRect>();
 
-        rect.mType = DDrawingsType::Box;
-        rect.mSize = size;
-        rect.mPosition = position;
-        rect.mZLevel = zlevel;
-        rect.mFillColor = fill_color;
-        rect.mIsOutlined = is_outlined;
-        rect.mOutlineThickness = outline_thickness;
-        rect.mOutlineColor = outline_color;
-        rect.mIsRounded = is_rounded;
-        rect.mRoundingRadius = rounding_radius;
-        mDrawings.emplace(zlevel, rect);
+        drawing->mType = DDrawingsType::Rect;
+        drawing->mSize = size;
+        drawing->mPosition = position;
+        drawing->mZLevel = zlevel;
+        drawing->mFillColor = fill_color;
+        drawing->mIsOutlined = is_outlined;
+        drawing->mOutlineThickness = outline_thickness;
+        drawing->mOutlineColor = outline_color;
+        drawing->mIsRounded = is_rounded;
+        drawing->mRoundingRadius = rounding_radius;
+        mDrawings.emplace(zlevel, drawing);
+
+        return *this;
+    }
+
+    Derma& Derma::DrawText(
+        size_t font_size,
+        sf::Vector2f position,
+        size_t zlevel,
+        sf::Color fill_color,
+        std::string text) {
+        auto drawing = std::make_shared<DrawingsText>();
+
+        drawing->mType = DDrawingsType::Text;
+        drawing->mPosition = position;
+        drawing->mZLevel = zlevel;
+        drawing->mFillColor = fill_color;
+        drawing->mFontSize = font_size;
+        drawing->mText = std::move(text);
+        mDrawings.emplace(zlevel, drawing);
 
         return *this;
     }

@@ -45,7 +45,8 @@ namespace OrbisExample {
                 .SetSize({400.0f, 200.0f})
                 .SetPosition({0.0f, screen_size.y - 200.0f})
                 .DrawRect({380.0f, 180.0f}, {10.0f, 10.0f}, 0, sf::Color({255, 255, 255, 255}))
-                .DrawRect({380.0f, 30.0f}, {10.0f, 10.0f}, 1, sf::Color({0, 180, 255, 255}));
+                .DrawRect({380.0f, 30.0f}, {10.0f, 10.0f}, 1, sf::Color({0, 180, 255, 255}))
+                .DrawText(15, {15.0f, 15.0f}, 100, sf::Color::White, "My HUD");
 
             auto& example_window = *UI::Create(DType::DWindow);
             example_window.SetName("Sub Menu")

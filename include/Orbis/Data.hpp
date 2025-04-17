@@ -55,7 +55,8 @@ namespace Orbis {
     };
 
     enum class DDrawingsType {
-        Box,
+        Rect,
+        Text,
         Image,
     };
 

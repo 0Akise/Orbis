@@ -5,36 +5,31 @@
 #include "Orbis/Data.hpp"
 
 namespace Orbis {
-    class DermaDrawings {
-    public:
-        DDrawingsType mType;
+class DermaDrawings {
+public:
+    DDrawingsType mType;
+    sf::Vector2f mPosition;
+    size_t mZLevel;
+    sf::Color mFillColor;
 
-        virtual ~DermaDrawings() = default;
-    };
+    virtual ~DermaDrawings() = default;
+};
 
-    class DrawingsRect : DermaDrawings {
-    public:
-        sf::Vector2f mSize;
-        sf::Vector2f mPosition;
-        size_t mZLevel;
-        sf::Color mFillColor;
+class DrawingsRect : public DermaDrawings {
+public:
+    sf::Vector2f mSize;
 
-        bool mIsOutlined;
-        float mOutlineThickness;
-        sf::Color mOutlineColor;
+    bool mIsOutlined;
+    float mOutlineThickness;
+    sf::Color mOutlineColor;
 
-        bool mIsRounded;
-        float mRoundingRadius;
-    };
+    bool mIsRounded;
+    float mRoundingRadius;
+};
 
-    class DrawingsText : DermaDrawings {
-    public:
-        sf::Vector2f mSize;
-        sf::Vector2f mPosition;
-        size_t mZLevel;
-        sf::Color mFillColor;
-
-        size_t mFontSize;
-        std::string mText;
-    };
+class DrawingsText : public DermaDrawings {
+public:
+    size_t mFontSize;
+    std::string mText;
+};
 }
