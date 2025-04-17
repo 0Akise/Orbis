@@ -1,10 +1,29 @@
 cmake_minimum_required(VERSION 3.28)
-project(Orbis LANGUAGES CXX)
+project(Orbis VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(ORBIS_BUILD_EXAMPLE "Build example projects" ON)
+option(ORBIS_BUILD_TEST "Build tests" OFF)
+option(ORBIS_BUILD_DOCS "Build documentation" OFF)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_library(Orbis INTERFACE)
 
 include(FetchContent)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+target_include_directories(
+    Orbis INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_compile_features(
+    Orbis INTERFACE
+    cxx_std_20)
 
 FetchContent_Declare(
     SFML
@@ -13,32 +32,47 @@ FetchContent_Declare(
     GIT_SHALLOW ON
     EXCLUDE_FROM_ALL
     SYSTEM)
-
 FetchContent_MakeAvailable(SFML)
 
-find_package(Vulkan REQUIRED)
-
 set(SFML_LIBRARIES sfml-system sfml-window sfml-graphics sfml-audio sfml-network)
-set(VULKAN_LIBRARIES Vulkan::Vulkan)
 
-file(GLOB_RECURSE HEADERS "include/*.hpp")
-file(GLOB SOURCES "src/*.cpp")
-
-add_executable(Orbis ${HEADERS} ${SOURCES})
-
-target_include_directories(Orbis PRIVATE include)
-target_link_libraries(Orbis PRIVATE ${SFML_LIBRARIES} ${VULKAN_LIBRARIES})
-target_compile_features(Orbis PRIVATE cxx_std_20)
+target_link_libraries(Orbis INTERFACE ${SFML_LIBRARIES})
 
 if(MSVC)
-    target_compile_options(Orbis PRIVATE /W4 /WX)
-    target_compile_definitions(
-        Orbis PRIVATE
-        NOMINMAX
-        WIN32_LEAN_AND_MEAN
-    )
+    target_compile_options(Orbis INTERFACE /W4)
+    target_compile_definitions(Orbis INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN)
 else()
-    target_compile_options(Orbis PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(Orbis INTERFACE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-install(TARGETS Orbis)
+if(ORBIS_BUILD_EXAMPLE)
+    add_subdirectory(example)
+endif()
+
+if(ORBIS_BUILD_TEST)
+    add_subdirectory(test)
+endif()
+
+install(TARGETS Orbis EXPORT OrbisTargets)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+write_basic_package_version_file(
+    "OrbisConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/OrbisConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
+
+install(
+    FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
+install(
+    EXPORT OrbisTargets
+    FILE OrbisTargets.cmake
+    NAMESPACE Orbis::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)

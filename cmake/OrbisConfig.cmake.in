@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(SFML 3.0 COMPONENTS system window graphics)
+
+include("${CMAKE_CURRENT_LIST_DIR}/OrbisTargets.cmake")
+
+check_required_components(Orbis)
