@@ -8,7 +8,8 @@ namespace Orbis {
     public:
         virtual ~DermaInterface() = default;
 
-        virtual sf::Vector2f GetPositionGlobal() const = 0;
         virtual sf::Vector2f GetSize() const = 0;
+        virtual sf::Vector2f GetPositionLocal() const = 0;
+        virtual sf::Vector2f GetPositionGlobal() const = 0;
     };
 }

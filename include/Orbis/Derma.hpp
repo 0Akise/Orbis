@@ -11,7 +11,7 @@
 
 #include "Orbis/Controls.hpp"
 #include "Orbis/Data.hpp"
-#include "Orbis/DermaDrawing.hpp"
+#include "Orbis/DermaDrawings.hpp"
 #include "Orbis/DermaEvent.hpp"
 #include "Orbis/DermaInterface.hpp"
 #include "Orbis/DermaOption.hpp"
@@ -28,7 +28,7 @@ namespace Orbis {
         sf::Vector2f mPosition;
         size_t mZLevel;
 
-        std::multimap<size_t, DermaDrawing> mDrawings;
+        std::multimap<size_t, DermaDrawings> mDrawings;
 
         DermaEventSystem mEventSystem;
         MouseState mMousePrevious;
@@ -158,7 +158,7 @@ namespace Orbis {
             return mSize;
         }
 
-        sf::Vector2f GetPositionLocal() const {
+        sf::Vector2f GetPositionLocal() const override {
             return mPosition;
         }
 
@@ -288,7 +288,7 @@ namespace Orbis {
 
         void SetResizable(bool is_resizable) {
             if ((is_resizable == true) && (mOptionResizable.expired() == true)) {
-                mOptionResizable = AddOption<Resizable>(mPosition, mSize, mIsDebugMode);
+                mOptionResizable = AddOption<Resizable>(mSize, mIsDebugMode);
             } else if ((is_resizable == false) && (mOptionResizable.expired() == false)) {
                 RemoveOption<Resizable>();
             }
@@ -335,10 +335,10 @@ namespace Orbis {
         void Update(const Controls& controls);
         void Render(sf::RenderWindow& window);
         void ProcessControls(const Controls& controls);
-        void ProcessDrawings(sf::RenderWindow& window, const DermaDrawing& drawing, const sf::Vector2f& pos_global);
+        void ProcessDrawings(sf::RenderWindow& window, const DermaDrawings& drawing, const sf::Vector2f& pos_global);
         void ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global);
 
-        Derma& DrawBox(
+        Derma& DrawRect(
             sf::Vector2f size,
             sf::Vector2f position,
             size_t zlevel,
@@ -348,6 +348,15 @@ namespace Orbis {
             sf::Color outline_color = sf::Color::Black,
             bool is_rounded = false,
             float rounding_radius = 0.0f);
+
+        Derma& DrawText(
+            sf::Vector2f size,
+            sf::Vector2f position,
+            size_t zlevel,
+            sf::Color fill_color,
+
+            size_t font_size = 12,
+            std::string text = "");
     };
 }
 
@@ -430,11 +439,11 @@ namespace Orbis {
         mMousePrevious.mRPress = event_base.mMouseState.mRPress;
     }
 
-    void Derma::ProcessDrawings(sf::RenderWindow& window, const DermaDrawing& drawing, const sf::Vector2f& pos_global) {
+    void Derma::ProcessDrawings(sf::RenderWindow& window, const DermaDrawings& drawing, const sf::Vector2f& pos_global) {
         sf::Vector2f pos_drawing = pos_global + drawing.mPosition;
 
         switch (drawing.mType) {
-            case DDrawingType::Box: {
+            case DDrawingsType::Box: {
                 if (drawing.mIsRounded == true) {
                     // SFMLExt::RoundedRectangleShape is not implemented yet
                     sf::RectangleShape _shape(drawing.mSize);
@@ -467,7 +476,7 @@ namespace Orbis {
                 }
             }
 
-            case DDrawingType::Image: {
+            case DDrawingsType::Image: {
                 // Do stuff for image drawing
                 break;
             }
@@ -485,7 +494,7 @@ namespace Orbis {
         window.draw(rect);
     }
 
-    Derma& Derma::DrawBox(
+    Derma& Derma::DrawRect(
         sf::Vector2f size,
         sf::Vector2f position,
         size_t zlevel,
@@ -495,19 +504,19 @@ namespace Orbis {
         sf::Color outline_color,
         bool is_rounded,
         float rounding_radius) {
-        DermaDrawing drawing;
+        DrawingsRect rect;
 
-        drawing.mType = DDrawingType::Box;
-        drawing.mSize = size;
-        drawing.mPosition = position;
-        drawing.mZLevel = zlevel;
-        drawing.mFillColor = fill_color;
-        drawing.mIsOutlined = is_outlined;
-        drawing.mOutlineThickness = outline_thickness;
-        drawing.mOutlineColor = outline_color;
-        drawing.mIsRounded = is_rounded;
-        drawing.mRoundingRadius = rounding_radius;
-        mDrawings.emplace(zlevel, drawing);
+        rect.mType = DDrawingsType::Box;
+        rect.mSize = size;
+        rect.mPosition = position;
+        rect.mZLevel = zlevel;
+        rect.mFillColor = fill_color;
+        rect.mIsOutlined = is_outlined;
+        rect.mOutlineThickness = outline_thickness;
+        rect.mOutlineColor = outline_color;
+        rect.mIsRounded = is_rounded;
+        rect.mRoundingRadius = rounding_radius;
+        mDrawings.emplace(zlevel, rect);
 
         return *this;
     }

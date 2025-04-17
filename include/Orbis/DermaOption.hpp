@@ -8,7 +8,6 @@
 #include "Orbis/Controls.hpp"
 #include "Orbis/Data.hpp"
 #include "Orbis/DermaEvent.hpp"
-#include "Orbis/DermaInterface.hpp"
 
 namespace Orbis {
     class DermaOption {
@@ -92,7 +91,6 @@ namespace Orbis {
     class Resizable : public DermaOption {
     private:
         [[maybe_unused]] std::weak_ptr<DermaInterface> mParent;
-        sf::Vector2f mPosition;
         sf::Vector2f mSize;
         sf::Vector2f mOffsetResizing;
         sf::Vector2f mMinimumSize = {10.0f, 10.0f};
@@ -100,8 +98,8 @@ namespace Orbis {
         bool mIsDebugMode;
 
     public:
-        explicit Resizable(std::shared_ptr<DermaInterface> derma, sf::Vector2f position, sf::Vector2f size, bool is_debug_mode)
-            : mParent(derma), mPosition(position), mSize(size), mIsDebugMode(is_debug_mode) {}
+        explicit Resizable(std::shared_ptr<DermaInterface> derma, sf::Vector2f size, bool is_debug_mode)
+            : mParent(derma), mSize(size), mIsDebugMode(is_debug_mode) {}
 
         bool GetResizedStatus() const {
             return mIsResized;

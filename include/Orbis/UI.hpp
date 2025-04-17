@@ -34,7 +34,7 @@ namespace Orbis {
 
             mDermas.push_back(derma);
 
-            if (parent) {
+            if (parent != nullptr) {
                 parent->AddChild(derma);
             }
 

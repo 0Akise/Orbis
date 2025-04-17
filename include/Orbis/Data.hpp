@@ -54,7 +54,7 @@ namespace Orbis {
         ChildRemoved
     };
 
-    enum class DDrawingType {
+    enum class DDrawingsType {
         Box,
         Image,
     };
