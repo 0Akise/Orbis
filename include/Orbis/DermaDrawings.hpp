@@ -29,6 +29,7 @@ public:
 
 class DrawingsText : public DermaDrawings {
 public:
+    std::string mFontPath;
     size_t mFontSize;
     std::string mText;
 };

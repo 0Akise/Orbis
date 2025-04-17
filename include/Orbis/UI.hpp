@@ -5,8 +5,6 @@
 #include <memory>
 #include <vector>
 
-#include <SFML/Graphics.hpp>
-
 #include "Orbis/Data.hpp"
 #include "Orbis/Derma.hpp"
 

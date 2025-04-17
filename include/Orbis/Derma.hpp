@@ -350,11 +350,11 @@ namespace Orbis {
             float rounding_radius = 0.0f);
 
         Derma& DrawText(
+            const std::string& font_path,
             size_t font_size,
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
-
             std::string text = "");
     };
 }
@@ -446,7 +446,7 @@ namespace Orbis {
                 auto drawing_rect = std::static_pointer_cast<DrawingsRect>(drawing);
 
                 if (drawing_rect->mIsRounded == true) {
-                    // SFMLExt::RoundedRectangleShape is not implemented yet
+                    // SFMLExt/sf::RoundedRectangleShape is not implemented yet
                     sf::RectangleShape shape(drawing_rect->mSize);
 
                     shape.setPosition(pos_drawing);
@@ -479,7 +479,7 @@ namespace Orbis {
 
             case DDrawingsType::Text: {
                 auto drawing_text = std::static_pointer_cast<DrawingsText>(drawing);
-                sf::Font font("./res/font.ttf");
+                sf::Font font(drawing_text->mFontPath);
                 sf::Text text(font, drawing_text->mText, drawing_text->mFontSize);
 
                 text.setPosition(pos_drawing);
@@ -536,6 +536,7 @@ namespace Orbis {
     }
 
     Derma& Derma::DrawText(
+        const std::string& font_path,
         size_t font_size,
         sf::Vector2f position,
         size_t zlevel,
@@ -544,6 +545,7 @@ namespace Orbis {
         auto drawing = std::make_shared<DrawingsText>();
 
         drawing->mType = DDrawingsType::Text;
+        drawing->mFontPath = font_path;
         drawing->mPosition = position;
         drawing->mZLevel = zlevel;
         drawing->mFillColor = fill_color;
