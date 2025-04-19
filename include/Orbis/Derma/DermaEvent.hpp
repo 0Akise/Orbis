@@ -7,9 +7,26 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "Orbis/Data.hpp"
+#include "Orbis/Base/Controls.hpp"
+#include "Orbis/Derma/DermaEnums.hpp"
 
 namespace Orbis {
+    struct DEvent {
+        DEventType mType;
+
+        sf::Vector2f mPosition;
+        sf::Vector2f mSize;
+        size_t mZLevel;
+
+        Controls mControls;
+
+        bool mIsInBounds;
+        bool mIsVisible;
+    };
+
+    using EventCallback = std::function<void(const DEvent&)>;
+    using NotifyCallback = std::function<void(DEventType, const void*)>;
+
     class DermaEventSystem {
     private:
         std::unordered_map<DEventType, std::vector<EventCallback>> mListeners;

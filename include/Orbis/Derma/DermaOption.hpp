@@ -5,9 +5,8 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "Orbis/Controls.hpp"
-#include "Orbis/Data.hpp"
-#include "Orbis/DermaEvent.hpp"
+#include "Orbis/Derma/DermaEvent.hpp"
+#include "Orbis/Derma/DermaInterface.hpp"
 
 namespace Orbis {
     class DermaOption {
@@ -15,8 +14,6 @@ namespace Orbis {
         virtual ~DermaOption() = default;
 
         virtual void Initialize(DermaEventSystem& event, NotifyCallback notify) = 0;
-        virtual void Update(const Controls&) {};
-        virtual void Render(sf::RenderWindow&) {};
     };
 
     class Selectable : public DermaOption {
@@ -67,7 +64,7 @@ namespace Orbis {
                     mIsMoved = true;
 
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        mOffsetMoving = event.mMouseState.mPosition - event.mPosition;
+                        mOffsetMoving = event.mControls.mMouse.mPosition - event.mPosition;
                     }
                 }
             });
@@ -75,7 +72,7 @@ namespace Orbis {
             event_system.RegisterListener(DEventType::MouseMove, [this, notify_ref](const DEvent& event) {
                 if (mIsMoved == true) {
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        mPosition = event.mMouseState.mPosition - mOffsetMoving;
+                        mPosition = event.mControls.mMouse.mPosition - mOffsetMoving;
 
                         notify_ref(DEventType::Moved, &mPosition);
                     }
@@ -95,11 +92,10 @@ namespace Orbis {
         sf::Vector2f mOffsetResizing;
         sf::Vector2f mMinimumSize = {10.0f, 10.0f};
         bool mIsResized = false;
-        bool mIsDebugMode;
 
     public:
-        explicit Resizable(std::shared_ptr<DermaInterface> derma, sf::Vector2f size, bool is_debug_mode)
-            : mParent(derma), mSize(size), mIsDebugMode(is_debug_mode) {}
+        explicit Resizable(std::shared_ptr<DermaInterface> derma, sf::Vector2f size)
+            : mParent(derma), mSize(size) {}
 
         bool GetResizedStatus() const {
             return mIsResized;
@@ -121,11 +117,11 @@ namespace Orbis {
                 sf::Vector2f size_handle = {10.0f, 10.0f};
                 sf::Vector2f pos_handle = {window_br.x - 10.0f, window_br.y - 10.0f};
 
-                if (sf::Rect<float>(pos_handle, size_handle).contains(event.mMouseState.mPosition) == true) {
+                if (sf::Rect<float>(pos_handle, size_handle).contains(event.mControls.mMouse.mPosition) == true) {
                     mIsResized = true;
 
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        mOffsetResizing = event.mMouseState.mPosition - window_br;
+                        mOffsetResizing = event.mControls.mMouse.mPosition - window_br;
                     }
                 }
             });
@@ -133,7 +129,7 @@ namespace Orbis {
             event_system.RegisterListener(DEventType::MouseMove, [this, notify_ref](const DEvent& event) {
                 if (mIsResized == true) {
                     if (auto parent = mParent.lock(); parent != nullptr) {
-                        sf::Vector2f pos_new_br = event.mMouseState.mPosition - mOffsetResizing;
+                        sf::Vector2f pos_new_br = event.mControls.mMouse.mPosition - mOffsetResizing;
                         sf::Vector2f size_new = pos_new_br - event.mPosition;
 
                         size_new.x = std::max(size_new.x, mMinimumSize.x);
@@ -148,19 +144,6 @@ namespace Orbis {
             event_system.RegisterListener(DEventType::MouseRUp, [this](const DEvent&) {
                 mIsResized = false;
             });
-        }
-
-        void Render(sf::RenderWindow& window) override {
-            if (mIsDebugMode == true) {
-                if (auto parent = mParent.lock(); parent != nullptr) {
-                    sf::Vector2f pos_global = parent->GetPositionGlobal();
-                    sf::RectangleShape handle({10.0f, 10.0f});
-
-                    handle.setPosition({(pos_global.x + mSize.x) - 10.0f, (pos_global.y + mSize.y) - 10.0f});
-                    handle.setFillColor(sf::Color(200, 200, 200));
-                    window.draw(handle);
-                }
-            }
         }
     };
 }

@@ -4,6 +4,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "Orbis/Base/Controls.hpp"
+
 namespace Orbis {
     enum class DType {
         DFrame,
@@ -57,30 +59,7 @@ namespace Orbis {
     enum class DDrawingsType {
         Rect,
         Text,
-        Image,
+        Image,  // texture
+        Sprite,
     };
-
-    struct MouseState {
-        sf::Vector2f mPosition = {0, 0};
-        bool mLPress = false;
-        bool mRPress = false;
-        bool mWPress = false;
-        bool mScroll = false;
-    };
-
-    struct DEvent {
-        DEventType mType;
-
-        sf::Vector2f mPosition;
-        sf::Vector2f mSize;
-        size_t mZLevel;
-
-        MouseState mMouseState;
-
-        bool mIsInBounds;
-        bool mIsVisible;
-    };
-
-    using EventCallback = std::function<void(const DEvent&)>;
-    using NotifyCallback = std::function<void(DEventType, const void*)>;
 }

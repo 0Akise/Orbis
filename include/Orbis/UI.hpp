@@ -5,27 +5,19 @@
 #include <memory>
 #include <vector>
 
-#include "Orbis/Data.hpp"
-#include "Orbis/Derma.hpp"
+#include "Orbis/Base/Controls.hpp"
+#include "Orbis/Base/ResourceVault.hpp"
+#include "Orbis/Derma/Derma.hpp"
 
 namespace Orbis {
     class UI {
     private:
         std::vector<std::shared_ptr<Derma>> mDermas;
         size_t mIDCounter;
+        Controls mControls;
+        ResourceVault mResourceVault;
 
-    public:
-        UI()
-            : mDermas(),
-              mIDCounter(0) {}
-
-        static UI& GetUISystem() {
-            static UI instance;
-
-            return instance;
-        }
-
-        std::shared_ptr<Derma> Instance_Create(DType type, std::shared_ptr<Derma> parent) {
+        std::shared_ptr<Derma> Create_Instance(DType type, std::shared_ptr<Derma> parent) {
             auto derma = Derma::Create(type, mIDCounter++);
 
             derma->SetRegistered(true);
@@ -39,15 +31,18 @@ namespace Orbis {
             return derma;
         }
 
-        static std::shared_ptr<Derma> Create(DType type) {
-            return GetUISystem().Instance_Create(type, nullptr);
+        std::shared_ptr<sf::Font> LoadFont_Instance(const std::string& path) {
+            return mResourceVault.LoadFont(path);
         }
 
-        static std::shared_ptr<Derma> Create(DType type, std::shared_ptr<Derma> parent) {
-            return GetUISystem().Instance_Create(type, parent);
+        std::shared_ptr<sf::Texture> LoadTexture_Instance(
+            const std::string& path,
+            bool srgb_enabled = false,
+            const sf::IntRect& area = sf::IntRect()) {
+            return mResourceVault.LoadTexture(path, srgb_enabled, area);
         }
 
-        void Instance_ShowDermaList() {
+        void ShowDermaList_Instance() {
             std::cout << "UI Dermas Listing\n";
             std::cout << "=====================\n";
 
@@ -59,28 +54,68 @@ namespace Orbis {
             std::cout << std::endl;
         }
 
-        static void ShowDermaList() {
-            GetUISystem().Instance_ShowDermaList();
-        }
+        void Update_Instance(sf::RenderWindow& window) {
+            mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
+            mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
+            mControls.mMouse.mLPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
+            mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
 
-        void Instance_Update(const Controls& controls) {
             for (auto& derma : mDermas) {
-                derma->Update(controls);
+                derma->Update(mControls);
             }
         }
 
-        static void Update(const Controls& controls) {
-            GetUISystem().Instance_Update(controls);
-        }
-
-        void Instance_Render(sf::RenderWindow& window) {
+        void Render_Instance(sf::RenderWindow& window) {
             for (auto& derma : mDermas) {
                 derma->Render(window);
             }
         }
 
+    public:
+        UI()
+            : mDermas(),
+              mIDCounter(0) {}
+
+        static UI& GetUISystem() {
+            static UI instance;
+
+            return instance;
+        }
+
+        static std::shared_ptr<Derma> Create(DType type) {
+            return GetUISystem().Create_Instance(type, nullptr);
+        }
+
+        static std::shared_ptr<Derma> Create(DType type, std::shared_ptr<Derma> parent) {
+            return GetUISystem().Create_Instance(type, parent);
+        }
+
+        static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
+            return GetUISystem().LoadFont_Instance(path);
+        }
+
+        static std::shared_ptr<sf::Texture> LoadTexture(
+            const std::string& path,
+            bool srgb_enabled = false,
+            const sf::IntRect& area = sf::IntRect()) {
+            return GetUISystem().LoadTexture_Instance(path, srgb_enabled, area);
+        }
+
+        static void ClearAllResources() {
+            GetUISystem().mResourceVault.ClearAllResources();
+        }
+
+        static void ShowDermaList() {
+            GetUISystem().ShowDermaList_Instance();
+        }
+
+        static void Update(sf::RenderWindow& window) {
+            GetUISystem().Update_Instance(window);
+        }
+
         static void Render(sf::RenderWindow& window) {
-            GetUISystem().Instance_Render(window);
+            GetUISystem().Render_Instance(window);
         }
     };
 }

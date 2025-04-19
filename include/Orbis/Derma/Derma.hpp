@@ -9,12 +9,12 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "Orbis/Controls.hpp"
-#include "Orbis/Data.hpp"
-#include "Orbis/DermaDrawings.hpp"
-#include "Orbis/DermaEvent.hpp"
-#include "Orbis/DermaInterface.hpp"
-#include "Orbis/DermaOption.hpp"
+#include "Orbis/Base/Controls.hpp"
+#include "Orbis/Derma/DermaDrawings.hpp"
+#include "Orbis/Derma/DermaEnums.hpp"
+#include "Orbis/Derma/DermaEvent.hpp"
+#include "Orbis/Derma/DermaInterface.hpp"
+#include "Orbis/Derma/DermaOption.hpp"
 
 namespace Orbis {
     class Derma : public DermaInterface, public std::enable_shared_from_this<Derma> {
@@ -31,7 +31,7 @@ namespace Orbis {
         std::multimap<size_t, std::shared_ptr<DermaDrawings>> mDrawings;
 
         DermaEventSystem mEventSystem;
-        MouseState mMousePrevious;
+        Controls mControlsPrevious;
 
         bool mIsVisible;
         bool mIsRegistered;
@@ -288,7 +288,7 @@ namespace Orbis {
 
         void SetResizable(bool is_resizable) {
             if ((is_resizable == true) && (mOptionResizable.expired() == true)) {
-                mOptionResizable = AddOption<Resizable>(mSize, mIsDebugMode);
+                mOptionResizable = AddOption<Resizable>(mSize);
             } else if ((is_resizable == false) && (mOptionResizable.expired() == false)) {
                 RemoveOption<Resizable>();
             }
@@ -349,13 +349,45 @@ namespace Orbis {
             bool is_rounded = false,
             float rounding_radius = 0.0f);
 
+        Derma& DrawRectDynamic(
+            const std::string& id,
+            sf::Vector2f size,
+            sf::Vector2f position,
+            size_t zlevel,
+            sf::Color fill_color,
+            bool is_outlined = false,
+            float outline_thickness = 0.0f,
+            sf::Color outline_color = sf::Color::Black,
+            bool is_rounded = false,
+            float rounding_radius = 0.0f);
+
         Derma& DrawText(
-            const std::string& font_path,
+            sf::Font font,
             size_t font_size,
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
             std::string text = "");
+
+        Derma& DrawTextDynamic(
+            const std::string& id,
+            sf::Font font,
+            size_t font_size,
+            sf::Vector2f position,
+            size_t zlevel,
+            sf::Color fill_color,
+            std::string text = "");
+
+        Derma& DrawImage(
+            sf::Vector2f size,
+            sf::Vector2f position,
+            size_t zlevel,
+            sf::Color fill_color,
+            sf::Texture texture,
+            bool smoothing_enabled = true);
+
+        Derma& ClearDrawing(const std::string& id);
+        Derma& ClearDrawingsAll();
     };
 }
 
@@ -365,10 +397,6 @@ namespace Orbis {
             return;
 
         ProcessControls(controls);
-
-        for (auto& option : mOptions) {
-            option->Update(controls);
-        }
     }
 
     void Derma::Render(sf::RenderWindow& window) {
@@ -384,14 +412,10 @@ namespace Orbis {
         if (mIsDebugMode == true) {
             ProcessDebugMode(window, pos_global);
         }
-
-        for (auto& option : mOptions) {
-            option->Render(window);
-        }
     }
 
     void Derma::ProcessControls(const Controls& controls) {
-        mIsInBounds = IsInBounds(controls.GetMousePosition());
+        mIsInBounds = IsInBounds(controls.mMouse.mPosition);
 
         DEvent event_base;
 
@@ -399,10 +423,10 @@ namespace Orbis {
         event_base.mSize = mSize;
         event_base.mZLevel = mZLevel;
         event_base.mIsInBounds = mIsInBounds;
-        event_base.mMouseState.mPosition = controls.GetMousePosition();
-        event_base.mMouseState.mLPress = controls.GetIsLMousePressed();
-        event_base.mMouseState.mRPress = controls.GetIsRMousePressed();
-        event_base.mMouseState.mWPress = controls.GetIsWMousePressed();
+        event_base.mControls.mMouse.mPosition = controls.mMouse.mPosition;
+        event_base.mControls.mMouse.mLPress = controls.mMouse.mLPress;
+        event_base.mControls.mMouse.mRPress = controls.mMouse.mRPress;
+        event_base.mControls.mMouse.mWPress = controls.mMouse.mWPress;
         event_base.mIsVisible = mIsVisible;
 
         DEvent event_move = event_base;
@@ -410,32 +434,32 @@ namespace Orbis {
         event_move.mType = DEventType::MouseMove;
         mEventSystem.EmitEvent(event_move);
 
-        if ((event_base.mMouseState.mLPress == true) && (mMousePrevious.mLPress == false)) {
+        if ((event_base.mControls.mMouse.mLPress == true) && (mControlsPrevious.mMouse.mLPress == false)) {
             DEvent event_mouse_down = event_base;
 
             event_mouse_down.mType = DEventType::MouseLDown;
             mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mMouseState.mLPress == false) && (mMousePrevious.mLPress == true)) {
+        } else if ((event_base.mControls.mMouse.mLPress == false) && (mControlsPrevious.mMouse.mLPress == true)) {
             DEvent event_mouse_up = event_base;
 
             event_mouse_up.mType = DEventType::MouseLUp;
             mEventSystem.EmitEvent(event_mouse_up);
         }
 
-        if ((event_base.mMouseState.mRPress == true) && (mMousePrevious.mRPress == false)) {
+        if ((event_base.mControls.mMouse.mRPress == true) && (mControlsPrevious.mMouse.mRPress == false)) {
             DEvent event_mouse_down = event_base;
 
             event_mouse_down.mType = DEventType::MouseRDown;
             mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mMouseState.mRPress == false) && (mMousePrevious.mRPress == true)) {
+        } else if ((event_base.mControls.mMouse.mRPress == false) && (mControlsPrevious.mMouse.mRPress == true)) {
             DEvent event_mouse_up = event_base;
 
             event_mouse_up.mType = DEventType::MouseRUp;
             mEventSystem.EmitEvent(event_mouse_up);
         }
 
-        mMousePrevious.mLPress = event_base.mMouseState.mLPress;
-        mMousePrevious.mRPress = event_base.mMouseState.mRPress;
+        mControlsPrevious.mMouse.mLPress = event_base.mControls.mMouse.mLPress;
+        mControlsPrevious.mMouse.mRPress = event_base.mControls.mMouse.mRPress;
     }
 
     void Derma::ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global) {
@@ -447,18 +471,6 @@ namespace Orbis {
 
                 if (drawing_rect->mIsRounded == true) {
                     // SFMLExt/sf::RoundedRectangleShape is not implemented yet
-                    sf::RectangleShape shape(drawing_rect->mSize);
-
-                    shape.setPosition(pos_drawing);
-                    shape.setFillColor(drawing_rect->mFillColor);
-
-                    if (drawing_rect->mIsOutlined == true) {
-                        shape.setOutlineThickness(drawing_rect->mOutlineThickness);
-                        shape.setOutlineColor(drawing_rect->mOutlineColor);
-                    }
-
-                    window.draw(shape);
-
                     break;
                 } else {
                     sf::RectangleShape shape(drawing_rect->mSize);
@@ -479,19 +491,35 @@ namespace Orbis {
 
             case DDrawingsType::Text: {
                 auto drawing_text = std::static_pointer_cast<DrawingsText>(drawing);
-                sf::Font font(drawing_text->mFontPath);
-                sf::Text text(font, drawing_text->mText, drawing_text->mFontSize);
+                sf::Text text(drawing_text->mFont, drawing_text->mText, drawing_text->mFontSize);
 
                 text.setPosition(pos_drawing);
                 text.setFillColor(drawing_text->mFillColor);
-
                 window.draw(text);
 
                 break;
             }
 
             case DDrawingsType::Image: {
-                // Do stuff for image drawing
+                auto drawing_image = std::static_pointer_cast<DrawingsTexture>(drawing);
+
+                sf::RectangleShape shape(drawing_image->mSize);
+
+                shape.setPosition(pos_drawing);
+                shape.setFillColor(drawing_image->mFillColor);
+
+                if (drawing_image->mTextureSmoothing == true) {
+                    drawing_image->mTexture.setSmooth(true);
+                }
+
+                shape.setTexture(&drawing_image->mTexture);
+                window.draw(shape);
+
+                break;
+            }
+
+            case DDrawingsType::Sprite: {
+                // Do stuff for sprite drawing
                 break;
             }
         }
@@ -521,6 +549,7 @@ namespace Orbis {
         auto drawing = std::make_shared<DrawingsRect>();
 
         drawing->mType = DDrawingsType::Rect;
+        drawing->mID = "";
         drawing->mSize = size;
         drawing->mPosition = position;
         drawing->mZLevel = zlevel;
@@ -535,8 +564,39 @@ namespace Orbis {
         return *this;
     }
 
+    Derma& Derma::DrawRectDynamic(
+        const std::string& id,
+        sf::Vector2f size,
+        sf::Vector2f position,
+        size_t zlevel,
+        sf::Color fill_color,
+        bool is_outlined,
+        float outline_thickness,
+        sf::Color outline_color,
+        bool is_rounded,
+        float rounding_radius) {
+        ClearDrawing(id);
+
+        auto drawing = std::make_shared<DrawingsRect>();
+
+        drawing->mType = DDrawingsType::Rect;
+        drawing->mID = id;
+        drawing->mSize = size;
+        drawing->mPosition = position;
+        drawing->mZLevel = zlevel;
+        drawing->mFillColor = fill_color;
+        drawing->mIsOutlined = is_outlined;
+        drawing->mOutlineThickness = outline_thickness;
+        drawing->mOutlineColor = outline_color;
+        drawing->mIsRounded = is_rounded;
+        drawing->mRoundingRadius = rounding_radius;
+        mDrawings.emplace(zlevel, drawing);
+
+        return *this;
+    };
+
     Derma& Derma::DrawText(
-        const std::string& font_path,
+        sf::Font font,
         size_t font_size,
         sf::Vector2f position,
         size_t zlevel,
@@ -545,13 +605,87 @@ namespace Orbis {
         auto drawing = std::make_shared<DrawingsText>();
 
         drawing->mType = DDrawingsType::Text;
-        drawing->mFontPath = font_path;
+        drawing->mID = "";
+        drawing->mFont = font;
         drawing->mPosition = position;
         drawing->mZLevel = zlevel;
         drawing->mFillColor = fill_color;
         drawing->mFontSize = font_size;
         drawing->mText = std::move(text);
         mDrawings.emplace(zlevel, drawing);
+
+        return *this;
+    }
+
+    Derma& Derma::DrawTextDynamic(
+        const std::string& id,
+        sf::Font font,
+        size_t font_size,
+        sf::Vector2f position,
+        size_t zlevel,
+        sf::Color fill_color,
+        std::string text) {
+        ClearDrawing(id);
+
+        auto drawing = std::make_shared<DrawingsText>();
+
+        drawing->mType = DDrawingsType::Text;
+        drawing->mID = id;
+        drawing->mFont = font;
+        drawing->mPosition = position;
+        drawing->mZLevel = zlevel;
+        drawing->mFillColor = fill_color;
+        drawing->mFontSize = font_size;
+        drawing->mText = std::move(text);
+        mDrawings.emplace(zlevel, drawing);
+
+        return *this;
+    };
+
+    Derma& Derma::DrawImage(
+        sf::Vector2f size,
+        sf::Vector2f position,
+        size_t zlevel,
+        sf::Color fill_color,
+        sf::Texture texture,
+        bool smoothing_enabled) {
+        auto drawing = std::make_shared<DrawingsTexture>();
+
+        drawing->mType = DDrawingsType::Image;
+        drawing->mID = "";
+        drawing->mSize = size;
+        drawing->mPosition = position;
+        drawing->mZLevel = zlevel;
+        drawing->mFillColor = fill_color;
+        drawing->mTexture = texture;
+        drawing->mTextureSmoothing = smoothing_enabled;
+        mDrawings.emplace(zlevel, drawing);
+
+        return *this;
+    }
+
+    Derma& Derma::ClearDrawing(const std::string& id) {
+        if (id.empty() == true) {
+            return *this;
+        }
+
+        std::vector<std::multimap<size_t, std::shared_ptr<DermaDrawings>>::iterator> to_erase;
+
+        for (auto iter = mDrawings.begin(); iter != mDrawings.end(); ++iter) {
+            if (iter->second->mID == id) {
+                to_erase.push_back(iter);
+            }
+        }
+
+        for (auto& iter : to_erase) {
+            mDrawings.erase(iter);
+        }
+
+        return *this;
+    }
+
+    Derma& Derma::ClearDrawingsAll() {
+        mDrawings.clear();
 
         return *this;
     }
