@@ -87,8 +87,8 @@ namespace Orbis {
             return GetUISystem().Create_Instance(type, nullptr);
         }
 
-        static std::shared_ptr<Derma> Create(DType type, std::shared_ptr<Derma> parent) {
-            return GetUISystem().Create_Instance(type, parent);
+        static std::shared_ptr<Derma> CreateChild(DType type, Derma& parent) {
+            return GetUISystem().Create_Instance(type, parent.shared_from_this());
         }
 
         static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {

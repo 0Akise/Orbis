@@ -33,18 +33,14 @@ int main() {
     auto& hp_image = *UI::LoadTexture("./res/hp.png");
     auto& ap_image = *UI::LoadTexture("./res/sp.png");
 
-    std::string hp_id = "health";
-    std::string hp_text_id = "health_text";
-    std::string ap_id = "armor";
-    std::string ap_text_id = "armor_text";
     AnimationState hp_anim;
     AnimationState ap_anim;
 
     hp_anim.mCurrent = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
     ap_anim.mCurrent = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
 
-    auto& example_hud = *UI::Create(DType::DFrame);
-    example_hud.SetName("MainFrame")
+    auto& frame_example = *UI::Create(DType::DFrame);
+    frame_example.SetName("MyHUD")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
         .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
@@ -55,14 +51,16 @@ int main() {
         .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
         .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}));
 
-    auto& example_window = *UI::Create(DType::DWindow);
-    example_window.SetName("MainWindow")
+    auto& window_example = *UI::Create(DType::DWindow);
+    window_example.SetName("MyPanel")
         .SetSize({300, 300})
         .SetPosition({200, 200})
-        .SetOptions(DOptionFlag::Default)
-        .DrawRect({300, 300}, {0, 0}, 0, sf::Color::White)
-        .DrawRect({300, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))
-        .DrawText(my_font, 15, {5, 5}, 20, sf::Color::White, "My Simple Window");
+        .SetOptions(DOptionFlag::Default);
+
+    auto& button_health_up = *UI::CreateChild(DType::DButton, window_example);
+    button_health_up.SetName("ButtonHealthUp")
+        .SetSize({50, 30})
+        .SetPosition({10, 10});
 
     UI::ShowDermaList();
 
@@ -109,10 +107,6 @@ int main() {
                 ap_anim.mFrom = ap_anim.mCurrent;
                 ap_anim.mTo = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
             }
-
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right) == true) {
-                std::cout << "MainWindow Size: " << example_window.GetSize().x << " " << example_window.GetSize().y << "\n";
-            }
         }
 
         if (hp_anim.mIsAnimating == true) {
@@ -133,11 +127,21 @@ int main() {
             }
         }
 
-        example_hud
-            .DrawRectDynamic(hp_id, {310 * hp_anim.mCurrent, 28}, {60, 52}, 2, sf::Color({227, 47, 92, 255}))
-            .DrawTextDynamic(hp_text_id, my_font, 13, {65, 55}, 20, sf::Color::White, std::to_string(player.mHealthCurrent))
-            .DrawRectDynamic(ap_id, {310 * ap_anim.mCurrent, 28}, {60, 92}, 2, sf::Color({82, 175, 255, 255}))
-            .DrawTextDynamic(ap_text_id, my_font, 13, {65, 95}, 20, sf::Color::White, std::to_string(player.mArmorCurrent));
+        sf::Vector2f window_size_current = window_example.GetSize();
+
+        frame_example
+            .DrawRectDynamic("health", {310 * hp_anim.mCurrent, 28}, {60, 52}, 2, sf::Color({227, 47, 92, 255}))
+            .DrawTextDynamic("health_text", my_font, 13, {65, 55}, 20, sf::Color::White, std::to_string(player.mHealthCurrent))
+            .DrawRectDynamic("armor", {310 * ap_anim.mCurrent, 28}, {60, 92}, 2, sf::Color({82, 175, 255, 255}))
+            .DrawTextDynamic("armor_text", my_font, 13, {65, 95}, 20, sf::Color::White, std::to_string(player.mArmorCurrent));
+
+        window_example
+            .DrawRectDynamic("window_bg", window_size_current, {0, 0}, 0, sf::Color::White)
+            .DrawRectDynamic("window_header", {window_size_current.x, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))
+            .DrawTextDynamic("window_title", my_font, 15, {5, 5}, 20, sf::Color::White, "My Simple Window");
+
+        button_health_up
+            .DrawRectDynamic("health_up", {50, 30}, {10, 40}, 10, sf::Color({150, 150, 150}));
 
         window.clear();
 
