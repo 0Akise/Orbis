@@ -2,6 +2,8 @@
 > [!CAUTION]
 > Orbis is in a VERY EARLY stage of development. DO NOT use it for production-ready applications.
 
+<ins>[English 🇬🇧](https://github.com/0Akise/Orbis/blob/master/README.md)</ins> | [日本語 🇯🇵](https://github.com/0Akise/Orbis/blob/master/README_JP.md)
+
 - A modern C++20 UI library built on SFML3, offering a highly customizable yet user-friendly interface for creating both 2D and 3D GUIs.
 - Orbis provides support for developers who want to build applications and games with SFML without having to develop their own GUI system from scratch.
 
@@ -26,6 +28,7 @@ for further information about SFML-Specific C++ compiling, check [SFML3 Download
 If possible, use LLVM-MinGW with UCRT which you can download from [Here](https://github.com/mstorsjo/llvm-mingw/releases).
 
 # Usage
+Check out `example` folder for further information.
 ```cpp
 // Creates Frame you can draw and customize, such as HUD for your game.
 auto& frame = *UI::Create(DType::DFrame);
@@ -33,7 +36,14 @@ frame.SetName("Main Frame")
     .SetSize({400.0f, 200.0f})
     .SetPosition({10.0f, 10.0f})
     .DrawRect({380.0f, 180.0f}, {10.0f, 10.0f}, 0, sf::Color::White);
+
+UI::ShowDermaList();
+// in main game loop
+UI::Update(window);
+UI::Render(window);
 ```
+- UI Class uses static/singleton pattern, which gives you direct control of how the UI should work.
+- by chaining commands with dots, you can control your Derma components with high customizability.
 
 ## Install
 add the follwing lines to your project's `CMakeLists.txt`:
@@ -60,6 +70,11 @@ and then build with CMake:
 ```bash
 cmake -S . -B build -G "MinGW Makefiles"
 cmake --build build --config Release
+```
+
+If you want to try out examples, run with following:
+```bash
+./build/example/{example_name}/{example_name}.exe // Windows
 ```
 
 # Roadmap
