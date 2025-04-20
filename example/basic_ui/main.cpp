@@ -62,6 +62,11 @@ int main() {
         .SetSize({50, 30})
         .SetPosition({10, 10});
 
+    auto& button_health_down = *UI::CreateChild(DType::DButton, window_example);
+    button_health_down.SetName("ButtonHealthDown")
+        .SetSize({50, 30})
+        .SetPosition({10, 10});
+
     UI::ShowDermaList();
 
     while (window.isOpen()) {
@@ -141,7 +146,10 @@ int main() {
             .DrawTextDynamic("window_title", my_font, 15, {5, 5}, 20, sf::Color::White, "My Simple Window");
 
         button_health_up
-            .DrawRectDynamic("health_up", {50, 30}, {10, 40}, 10, sf::Color({150, 150, 150}));
+            .DrawRectDynamic("health_up", {50, 30}, {10, 40}, 10, sf::Color({180, 180, 180}));
+
+        button_health_down
+            .DrawRectDynamic("health_down", {50, 30}, {10, 80}, 10, sf::Color(180, 180, 180));
 
         window.clear();
 

@@ -9,12 +9,9 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "Orbis/Base/Controls.hpp"
 #include "Orbis/Derma/DermaDrawings.hpp"
 #include "Orbis/Derma/DermaEnums.hpp"
-#include "Orbis/Derma/DermaEvent.hpp"
-#include "Orbis/Derma/DermaInterface.hpp"
-#include "Orbis/Derma/DermaOption.hpp"
+#include "Orbis/Derma/DermaOptions.hpp"
 
 namespace Orbis {
     class Derma : public DermaInterface, public std::enable_shared_from_this<Derma> {
@@ -30,7 +27,6 @@ namespace Orbis {
 
         std::multimap<size_t, std::shared_ptr<DermaDrawings>> mDrawings;
 
-        DermaEventSystem mEventSystem;
         Controls mControlsPrevious;
 
         bool mIsVisible;
@@ -43,6 +39,9 @@ namespace Orbis {
         std::weak_ptr<Resizable> mOptionResizable;
 
         bool mIsDebugMode;
+
+    protected:
+        DermaEventSystem mEventSystem;
 
     public:
         Derma(DType, size_t id)
