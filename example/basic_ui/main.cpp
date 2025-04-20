@@ -30,8 +30,8 @@ int main() {
     Player player;
 
     auto& my_font = *UI::LoadFont("./res/roboto.ttf");
-    auto& hp_image = *UI::LoadTexture("./res/hp.png");
-    auto& ap_image = *UI::LoadTexture("./res/sp.png");
+    auto& hp_texture = *UI::LoadTexture("./res/hp.png");
+    auto& ap_texture = *UI::LoadTexture("./res/ap.png");
 
     AnimationState hp_anim;
     AnimationState ap_anim;
@@ -46,8 +46,8 @@ int main() {
         .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
         .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
         .DrawText(my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
-        .DrawImage({32, 32}, {15, 50}, 10, sf::Color::White, hp_image)
-        .DrawImage({32, 32}, {15, 90}, 10, sf::Color::White, ap_image)
+        .DrawImage({32, 32}, {15, 50}, 10, sf::Color::White, hp_texture)
+        .DrawImage({32, 32}, {15, 90}, 10, sf::Color::White, ap_texture)
         .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
         .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}));
 
@@ -146,10 +146,10 @@ int main() {
             .DrawTextDynamic("window_title", my_font, 15, {5, 5}, 20, sf::Color::White, "My Simple Window");
 
         button_health_up
-            .DrawRectDynamic("health_up", {50, 30}, {10, 40}, 10, sf::Color({180, 180, 180}));
+            .DrawRectDynamic("health_up", {50, 20}, {10, 40}, 10, sf::Color({180, 180, 180}));
 
         button_health_down
-            .DrawRectDynamic("health_down", {50, 30}, {10, 80}, 10, sf::Color(180, 180, 180));
+            .DrawRectDynamic("health_down", {50, 20}, {10, 80}, 10, sf::Color(180, 180, 180));
 
         window.clear();
 
