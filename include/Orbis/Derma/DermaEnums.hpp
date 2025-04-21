@@ -13,7 +13,7 @@ namespace Orbis {
         DButton,
     };
 
-    enum class DOptionFlag : uint32_t {
+    enum class DOption : uint32_t {
         None = 0,
         Selectable = 1 << 0,
         Movable = 1 << 1,
@@ -22,12 +22,12 @@ namespace Orbis {
         Default = Selectable | Movable | Resizable
     };
 
-    inline DOptionFlag operator|(DOptionFlag a, DOptionFlag b) {
-        return static_cast<DOptionFlag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+    inline DOption operator|(DOption a, DOption b) {
+        return static_cast<DOption>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
     }
 
-    inline DOptionFlag operator&(DOptionFlag a, DOptionFlag b) {
-        return static_cast<DOptionFlag>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+    inline DOption operator&(DOption a, DOption b) {
+        return static_cast<DOption>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
     }
 
     enum class DEventType {
@@ -59,7 +59,13 @@ namespace Orbis {
     enum class DDrawingsType {
         Rect,
         Text,
-        Image,  // texture
+        Texture,
         Sprite,
+    };
+
+    enum class DButtonState {
+        Normal,
+        Hover,
+        Pressed,
     };
 }

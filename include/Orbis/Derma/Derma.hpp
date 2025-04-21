@@ -14,10 +14,11 @@
 #include "Orbis/Derma/DermaOptions.hpp"
 
 namespace Orbis {
-    class Derma : public DermaInterface, public std::enable_shared_from_this<Derma> {
+    template <typename Derived>
+    class Derma : public DermaInterface, public std::enable_shared_from_this<Derma<Derived>> {
     private:
-        std::weak_ptr<Derma> mParent;
-        std::vector<std::shared_ptr<Derma>> mChildren;
+        std::weak_ptr<DermaInterface> mParent;
+        std::vector<std::shared_ptr<DermaInterface>> mChildren;
 
         size_t mID;
         std::string mName;
@@ -43,6 +44,14 @@ namespace Orbis {
     protected:
         DermaEventSystem mEventSystem;
 
+        Derived& self() {
+            return *static_cast<Derived*>(this);
+        }
+
+        const Derived& self() const {
+            return *static_cast<const Derived*>(this);
+        }
+
     public:
         Derma(DType, size_t id)
             : mID(id),
@@ -55,17 +64,21 @@ namespace Orbis {
               mIsInBounds(false),
               mIsDebugMode(false) {}
 
-        static std::shared_ptr<Derma> Create(DType type, size_t id) {
-            return std::make_shared<Derma>(type, id);
+        static std::shared_ptr<DermaInterface> Create(DType type, size_t id) {
+            return std::make_shared<DermaInterface>(type, id);
         }
 
-        void AddChild(std::shared_ptr<Derma> child) {
-            if (auto parent = child->mParent.lock()) {
+        void SetParent(std::shared_ptr<DermaInterface> parent) override {
+            mParent = parent;
+        }
+
+        void AddChild(std::shared_ptr<DermaInterface> child) override {
+            if (auto parent = child->GetParent()) {
                 parent->RemoveChild(child);
             }
 
-            child->mParent = shared_from_this();
-            mChildren.push_back(std::move(child));
+            child->SetParent(this->shared_from_this());
+            mChildren.push_back(child);
 
             DEvent event_parent_changed;
             event_parent_changed.mType = DEventType::ParentChanged;
@@ -76,11 +89,11 @@ namespace Orbis {
             mEventSystem.EmitEvent(event_child_added);
         }
 
-        void RemoveChild(const std::shared_ptr<Derma>& child) {
+        void RemoveChild(const std::shared_ptr<DermaInterface>& child) override {
             auto iter = std::find(mChildren.begin(), mChildren.end(), child);
 
             if (iter != mChildren.end()) {
-                (*iter)->mParent.reset();
+                (*iter)->SetParent(nullptr);
                 mChildren.erase(iter);
 
                 DEvent event_child_removed;
@@ -89,9 +102,17 @@ namespace Orbis {
             }
         }
 
+        std::shared_ptr<DermaInterface> GetParent() const override {
+            return mParent.lock();
+        }
+
+        const std::vector<std::shared_ptr<DermaInterface>>& GetChildren() const override {
+            return mChildren;
+        }
+
         template <typename T, typename... Args>
         std::shared_ptr<T> AddOption(Args&&... args) {
-            auto option = std::make_shared<T>(shared_from_this(), std::forward<Args>(args)...);
+            auto option = std::make_shared<T>(this->shared_from_this(), std::forward<Args>(args)...);
             auto notify = [this](DEventType type, const void* data) {
                 DEvent event;
 
@@ -100,18 +121,18 @@ namespace Orbis {
                 if (type == DEventType::Moved) {
                     const sf::Vector2f* position = static_cast<const sf::Vector2f*>(data);
                     event.mPosition = *position;
-                    mPosition = *position;
+                    this->mPosition = *position;
                 } else if (type == DEventType::Resized) {
                     const sf::Vector2f* size = static_cast<const sf::Vector2f*>(data);
                     event.mSize = *size;
-                    mSize = *size;
+                    this->mSize = *size;
                 }
 
-                mEventSystem.EmitEvent(event);
+                this->mEventSystem.EmitEvent(event);
             };
 
-            option->Initialize(mEventSystem, notify);
-            mOptions.push_back(std::move(option));
+            option->Initialize(this->mEventSystem, notify);
+            this->mOptions.push_back(std::move(option));
 
             return option;
         }
@@ -119,41 +140,126 @@ namespace Orbis {
         template <typename T>
         void RemoveOption() {
             if constexpr (std::is_same_v<T, Selectable>) {
-                mOptionSelectable.reset();
+                this->mOptionSelectable.reset();
             }
 
             if constexpr (std::is_same_v<T, Movable>) {
-                mOptionMovable.reset();
+                this->mOptionMovable.reset();
             }
 
             if constexpr (std::is_same_v<T, Resizable>) {
-                mOptionResizable.reset();
+                this->mOptionResizable.reset();
             }
 
-            mOptions.erase(
-                std::remove_if(mOptions.begin(), mOptions.end(), [](const auto& option) {
+            this->mOptions.erase(
+                std::remove_if(this->mOptions.begin(), this->mOptions.end(), [](const auto& option) {
                     return dynamic_cast<T*>(option.get()) != nullptr;
                 }),
-                mOptions.end());
+                this->mOptions.end());
         }
 
-        std::shared_ptr<Derma> GetParent() const {
-            return mParent.lock();
+        template <typename T>
+        T* GetOption() const {
+            for (const auto& option : this->mOptions) {
+                auto* casted = dynamic_cast<T*>(option.get());
+
+                if (casted != nullptr) {
+                    return casted;
+                }
+            }
+
+            return nullptr;
         }
 
-        const std::vector<std::shared_ptr<Derma>>& GetChildren() const {
-            return mChildren;
+        Derived& SetOptions(DOption flags) {
+            bool has_selectable = HasOptionFlag(flags, DOption::Selectable);
+            SetSelectable(has_selectable);
+
+            bool has_movable = HasOptionFlag(flags, DOption::Movable);
+            SetMovable(has_movable);
+
+            bool has_resizable = HasOptionFlag(flags, DOption::Resizable);
+            SetResizable(has_resizable);
+
+            return self();
         }
 
-        size_t GetID() const {
+        void SetSelectable(bool is_selectable) {
+            if ((is_selectable == true) && (this->mOptionSelectable.expired() == true)) {
+                this->mOptionSelectable = AddOption<Selectable>();
+            } else if ((is_selectable == false) && (this->mOptionSelectable.expired() == false)) {
+                RemoveOption<Selectable>();
+            }
+        }
+
+        void SetMovable(bool is_movable) {
+            if ((is_movable == true) && (this->mOptionMovable.expired() == true)) {
+                this->mOptionMovable = AddOption<Movable>(this->mPosition);
+            } else if ((is_movable == false) && (this->mOptionMovable.expired() == false)) {
+                RemoveOption<Movable>();
+            }
+        }
+
+        void SetResizable(bool is_resizable) {
+            if ((is_resizable == true) && (this->mOptionResizable.expired() == true)) {
+                this->mOptionResizable = AddOption<Resizable>(this->mSize);
+            } else if ((is_resizable == false) && (this->mOptionResizable.expired() == false)) {
+                RemoveOption<Resizable>();
+            }
+        }
+
+        bool IsSelected() const {
+            auto selectable = this->mOptionSelectable.lock();
+
+            if (selectable != nullptr)
+                return selectable->GetSelectedStatus();
+
+            return false;
+        }
+
+        bool IsMoved() const {
+            auto movable = this->mOptionMovable.lock();
+
+            if (movable != nullptr)
+                return movable->GetMovedStatus();
+
+            return false;
+        }
+
+        bool IsResized() const {
+            auto resizable = this->mOptionResizable.lock();
+
+            if (resizable != nullptr)
+                return resizable->GetResizedStatus();
+
+            return false;
+        }
+
+        bool HasOptionFlag(DOption flags, DOption flag) const {
+            return (flags & flag) == flag;
+        }
+
+        bool IsInBounds(sf::Vector2f cursor_position) const {
+            sf::Vector2f pos_global = GetPositionGlobal();
+
+            return ((pos_global.x <= cursor_position.x) && (cursor_position.x <= pos_global.x + mSize.x)) &&
+                   ((pos_global.y <= cursor_position.y) && (cursor_position.y <= pos_global.y + mSize.y));
+        }
+
+        template <typename T = Derived>
+        std::shared_ptr<T> GetSharedFromThis() {
+            return std::static_pointer_cast<T>(this->shared_from_this());
+        }
+
+        size_t GetID() const override {
             return mID;
         }
 
-        const std::string& GetName() const {
+        const std::string& GetName() const override {
             return mName;
         }
 
-        sf::Vector2f GetSize() const override {
+        sf::Vector2f GetSize() const {
             return mSize;
         }
 
@@ -178,166 +284,210 @@ namespace Orbis {
             return mIsVisible;
         }
 
-        bool GetDebugModeStatus() const {
-            return mIsDebugMode;
-        }
-
         bool GetRegisteredStatus() const {
             return mIsRegistered;
         }
 
-        template <typename T>
-        T* GetOption() const {
-            for (const auto& option : mOptions) {
-                auto* casted = dynamic_cast<T*>(option.get());
-
-                if (casted != nullptr) {
-                    return casted;
-                }
-            }
-
-            return nullptr;
+        bool GetDebugModeStatus() const {
+            return mIsDebugMode;
         }
 
-        Derma& SetName(std::string name) {
+        Derived& SetName(std::string name) {
             mName = std::move(name);
-
-            return *this;
+            return self();
         }
 
-        Derma& SetSize(sf::Vector2f size) {
+        Derived& SetSize(sf::Vector2f size) {
             mSize = size;
 
             DEvent event_resized;
-
             event_resized.mType = DEventType::Resized;
             event_resized.mSize = size;
             mEventSystem.EmitEvent(event_resized);
 
-            return *this;
+            return self();
         }
 
-        Derma& SetPosition(sf::Vector2f position) {
+        Derived& SetPosition(sf::Vector2f position) {
             mPosition = position;
 
             DEvent event_moved;
-
             event_moved.mType = DEventType::Moved;
             event_moved.mPosition = position;
             mEventSystem.EmitEvent(event_moved);
 
-            return *this;
+            return self();
         }
 
-        Derma& SetZLevel(size_t zlevel) {
+        Derived& SetZLevel(size_t zlevel) {
             mZLevel = zlevel;
-
-            return *this;
+            return self();
         }
 
-        Derma& SetVisible(bool is_visible) {
+        Derived& SetVisible(bool is_visible) {
             mIsVisible = is_visible;
-
-            return *this;
+            return self();
         }
 
-        Derma& SetDebugMode(bool is_debugmode) {
-            mIsDebugMode = is_debugmode;
-
-            return *this;
-        }
-
-        Derma& SetRegistered(bool is_registered) {
+        Derived& SetRegistered(bool is_registered) {
             mIsRegistered = is_registered;
-
-            return *this;
+            return self();
         }
 
-        Derma& SetOptions(DOptionFlag flags) {
-            bool has_selectable = HasOptionFlag(flags, DOptionFlag::Selectable);
-
-            SetSelectable(has_selectable);
-
-            bool has_movable = HasOptionFlag(flags, DOptionFlag::Movable);
-
-            SetMovable(has_movable);
-
-            bool has_resizable = HasOptionFlag(flags, DOptionFlag::Resizable);
-
-            SetResizable(has_resizable);
-
-            return *this;
+        Derived& SetDebugMode(bool is_debugmode) {
+            mIsDebugMode = is_debugmode;
+            return self();
         }
 
-        void SetSelectable(bool is_selectable) {
-            if ((is_selectable == true) && (mOptionSelectable.expired() == true)) {
-                mOptionSelectable = AddOption<Selectable>();
-            } else if ((is_selectable == false) && (mOptionSelectable.expired() == false)) {
-                RemoveOption<Selectable>();
+        void Update(const Controls& controls) override {
+            if (this->mIsVisible == false)
+                return;
+
+            ProcessControls(controls);
+
+            for (auto& child : mChildren) {
+                child->Update(controls);
             }
         }
 
-        void SetMovable(bool is_movable) {
-            if ((is_movable == true) && (mOptionMovable.expired() == true)) {
-                mOptionMovable = AddOption<Movable>(mPosition);
-            } else if ((is_movable == false) && (mOptionMovable.expired() == false)) {
-                RemoveOption<Movable>();
+        void Render(sf::RenderWindow& window) override {
+            if (this->mIsVisible == false)
+                return;
+
+            sf::Vector2f pos_global = this->GetPositionGlobal();
+
+            for (const auto& [zlevel, drawing] : this->mDrawings) {
+                ProcessDrawings(window, drawing, pos_global);
+            }
+
+            if (this->mIsDebugMode == true) {
+                ProcessDebugMode(window, pos_global);
+            }
+
+            for (auto& child : mChildren) {
+                child->Render(window);
             }
         }
 
-        void SetResizable(bool is_resizable) {
-            if ((is_resizable == true) && (mOptionResizable.expired() == true)) {
-                mOptionResizable = AddOption<Resizable>(mSize);
-            } else if ((is_resizable == false) && (mOptionResizable.expired() == false)) {
-                RemoveOption<Resizable>();
+        void ProcessControls(const Controls& controls) {
+            this->mIsInBounds = this->IsInBounds(controls.mMouse.mPosition);
+
+            DEvent event_base;
+            event_base.mPosition = this->GetPositionGlobal();
+            event_base.mSize = this->mSize;
+            event_base.mZLevel = this->mZLevel;
+            event_base.mIsInBounds = this->mIsInBounds;
+            event_base.mControls.mMouse.mPosition = controls.mMouse.mPosition;
+            event_base.mControls.mMouse.mLPress = controls.mMouse.mLPress;
+            event_base.mControls.mMouse.mRPress = controls.mMouse.mRPress;
+            event_base.mControls.mMouse.mWPress = controls.mMouse.mWPress;
+            event_base.mIsVisible = this->mIsVisible;
+
+            DEvent event_move = event_base;
+            event_move.mType = DEventType::MouseMove;
+            this->mEventSystem.EmitEvent(event_move);
+
+            if ((event_base.mControls.mMouse.mLPress == true) && (this->mControlsPrevious.mMouse.mLPress == false)) {
+                DEvent event_mouse_down = event_base;
+
+                event_mouse_down.mType = DEventType::MouseLDown;
+                this->mEventSystem.EmitEvent(event_mouse_down);
+            } else if ((event_base.mControls.mMouse.mLPress == false) && (this->mControlsPrevious.mMouse.mLPress == true)) {
+                DEvent event_mouse_up = event_base;
+
+                event_mouse_up.mType = DEventType::MouseLUp;
+                this->mEventSystem.EmitEvent(event_mouse_up);
+            }
+
+            if ((event_base.mControls.mMouse.mRPress == true) && (this->mControlsPrevious.mMouse.mRPress == false)) {
+                DEvent event_mouse_down = event_base;
+
+                event_mouse_down.mType = DEventType::MouseRDown;
+                this->mEventSystem.EmitEvent(event_mouse_down);
+            } else if ((event_base.mControls.mMouse.mRPress == false) && (this->mControlsPrevious.mMouse.mRPress == true)) {
+                DEvent event_mouse_up = event_base;
+
+                event_mouse_up.mType = DEventType::MouseRUp;
+                this->mEventSystem.EmitEvent(event_mouse_up);
+            }
+
+            this->mControlsPrevious.mMouse.mLPress = event_base.mControls.mMouse.mLPress;
+            this->mControlsPrevious.mMouse.mRPress = event_base.mControls.mMouse.mRPress;
+        }
+
+        void ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global) {
+            sf::Vector2f pos_drawing = pos_global + drawing->mPosition;
+
+            switch (drawing->mType) {
+                case DDrawingsType::Rect: {
+                    auto drawing_rect = std::static_pointer_cast<DrawingsRect>(drawing);
+
+                    if (drawing_rect->mIsRounded == true) {
+                        break;
+                    } else {
+                        sf::RectangleShape shape(drawing_rect->mSize);
+
+                        shape.setPosition(pos_drawing);
+                        shape.setFillColor(drawing_rect->mFillColor);
+
+                        if (drawing_rect->mIsOutlined == true) {
+                            shape.setOutlineThickness(drawing_rect->mOutlineThickness);
+                            shape.setOutlineColor(drawing_rect->mOutlineColor);
+                        }
+
+                        window.draw(shape);
+
+                        break;
+                    }
+                }
+
+                case DDrawingsType::Text: {
+                    auto drawing_text = std::static_pointer_cast<DrawingsText>(drawing);
+                    sf::Text text(drawing_text->mFont, drawing_text->mText, drawing_text->mFontSize);
+
+                    text.setPosition(pos_drawing);
+                    text.setFillColor(drawing_text->mFillColor);
+                    window.draw(text);
+
+                    break;
+                }
+
+                case DDrawingsType::Texture: {
+                    auto drawing_texture = std::static_pointer_cast<DrawingsTexture>(drawing);
+
+                    sf::RectangleShape shape(drawing_texture->mSize);
+
+                    shape.setPosition(pos_drawing);
+                    shape.setFillColor(drawing_texture->mFillColor);
+
+                    if (drawing_texture->mTextureSmoothing == true) {
+                        drawing_texture->mTexture.setSmooth(true);
+                    }
+
+                    shape.setTexture(&drawing_texture->mTexture);
+                    window.draw(shape);
+
+                    break;
+                }
+
+                case DDrawingsType::Sprite: {
+                    break;
+                }
             }
         }
 
-        bool IsInBounds(sf::Vector2f cursor_position) const {
-            sf::Vector2f pos_global = GetPositionGlobal();
+        void ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global) {
+            sf::RectangleShape rect(this->mSize);
 
-            return ((pos_global.x <= cursor_position.x) && (cursor_position.x <= pos_global.x + mSize.x)) &&
-                   ((pos_global.y <= cursor_position.y) && (cursor_position.y <= pos_global.y + mSize.y));
+            rect.setPosition(pos_global);
+            rect.setFillColor(sf::Color(255, 255, 255, 128));
+            rect.setOutlineColor(sf::Color::White);
+            rect.setOutlineThickness(1.0f);
+
+            window.draw(rect);
         }
 
-        bool IsSelected() const {
-            auto selectable = mOptionSelectable.lock();
-
-            if (selectable != nullptr)
-                return selectable->GetSelectedStatus();
-
-            return false;
-        }
-
-        bool IsMoved() const {
-            auto movable = mOptionMovable.lock();
-
-            if (movable != nullptr)
-                return movable->GetMovedStatus();
-
-            return false;
-        }
-
-        bool IsResized() const {
-            auto resizable = mOptionResizable.lock();
-
-            if (resizable != nullptr)
-                return resizable->GetResizedStatus();
-
-            return false;
-        }
-
-        bool HasOptionFlag(DOptionFlag flags, DOptionFlag flag) const {
-            return (flags & flag) == flag;
-        }
-
-        void Update(const Controls& controls);
-        void Render(sf::RenderWindow& window);
-        void ProcessControls(const Controls& controls);
-        void ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global);
-        void ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global);
-
-        Derma& DrawRect(
+        Derived& DrawRect(
             sf::Vector2f size,
             sf::Vector2f position,
             size_t zlevel,
@@ -346,9 +496,26 @@ namespace Orbis {
             float outline_thickness = 0.0f,
             sf::Color outline_color = sf::Color::Black,
             bool is_rounded = false,
-            float rounding_radius = 0.0f);
+            float rounding_radius = 0.0f) {
+            auto drawing = std::make_shared<DrawingsRect>();
 
-        Derma& DrawRectDynamic(
+            drawing->mType = DDrawingsType::Rect;
+            drawing->mID = "";
+            drawing->mSize = size;
+            drawing->mPosition = position;
+            drawing->mZLevel = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mIsOutlined = is_outlined;
+            drawing->mOutlineThickness = outline_thickness;
+            drawing->mOutlineColor = outline_color;
+            drawing->mIsRounded = is_rounded;
+            drawing->mRoundingRadius = rounding_radius;
+            this->mDrawings.emplace(zlevel, drawing);
+
+            return self();
+        }
+
+        Derived& DrawRectDynamic(
             const std::string& id,
             sf::Vector2f size,
             sf::Vector2f position,
@@ -358,334 +525,145 @@ namespace Orbis {
             float outline_thickness = 0.0f,
             sf::Color outline_color = sf::Color::Black,
             bool is_rounded = false,
-            float rounding_radius = 0.0f);
+            float rounding_radius = 0.0f) {
+            ClearDrawing(id);
 
-        Derma& DrawText(
+            auto drawing = std::make_shared<DrawingsRect>();
+
+            drawing->mType = DDrawingsType::Rect;
+            drawing->mID = id;
+            drawing->mSize = size;
+            drawing->mPosition = position;
+            drawing->mZLevel = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mIsOutlined = is_outlined;
+            drawing->mOutlineThickness = outline_thickness;
+            drawing->mOutlineColor = outline_color;
+            drawing->mIsRounded = is_rounded;
+            drawing->mRoundingRadius = rounding_radius;
+            this->mDrawings.emplace(zlevel, drawing);
+
+            return self();
+        }
+
+        Derived& DrawText(
             sf::Font font,
             size_t font_size,
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
-            std::string text = "");
+            std::string text = "") {
+            auto drawing = std::make_shared<DrawingsText>();
 
-        Derma& DrawTextDynamic(
+            drawing->mType = DDrawingsType::Text;
+            drawing->mID = "";
+            drawing->mFont = font;
+            drawing->mPosition = position;
+            drawing->mZLevel = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mFontSize = font_size;
+            drawing->mText = std::move(text);
+            this->mDrawings.emplace(zlevel, drawing);
+
+            return self();
+        }
+
+        Derived& DrawTextDynamic(
             const std::string& id,
             sf::Font font,
             size_t font_size,
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
-            std::string text = "");
+            std::string text = "") {
+            ClearDrawing(id);
 
-        Derma& DrawImage(
+            auto drawing = std::make_shared<DrawingsText>();
+
+            drawing->mType = DDrawingsType::Text;
+            drawing->mID = id;
+            drawing->mFont = font;
+            drawing->mPosition = position;
+            drawing->mZLevel = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mFontSize = font_size;
+            drawing->mText = std::move(text);
+            this->mDrawings.emplace(zlevel, drawing);
+
+            return self();
+        }
+
+        Derived& DrawTexture(
             sf::Vector2f size,
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
             sf::Texture texture,
-            bool smoothing_enabled = true);
+            bool smoothing_enabled = true) {
+            auto drawing = std::make_shared<DrawingsTexture>();
 
-        Derma& ClearDrawing(const std::string& id);
-        Derma& ClearDrawingsAll();
-    };
-}
+            drawing->mType = DDrawingsType::Texture;
+            drawing->mID = "";
+            drawing->mSize = size;
+            drawing->mPosition = position;
+            drawing->mZLevel = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mTexture = texture;
+            drawing->mTextureSmoothing = smoothing_enabled;
+            this->mDrawings.emplace(zlevel, drawing);
 
-namespace Orbis {
-    void Derma::Update(const Controls& controls) {
-        if (mIsVisible == false)
-            return;
-
-        ProcessControls(controls);
-    }
-
-    void Derma::Render(sf::RenderWindow& window) {
-        if (mIsVisible == false)
-            return;
-
-        sf::Vector2f pos_global = GetPositionGlobal();
-
-        for (const auto& [zlevel, drawing] : mDrawings) {
-            ProcessDrawings(window, drawing, pos_global);
+            return self();
         }
 
-        if (mIsDebugMode == true) {
-            ProcessDebugMode(window, pos_global);
-        }
-    }
+        Derived& DrawTextureDynamic(
+            const std::string& id,
+            sf::Vector2f size,
+            sf::Vector2f position,
+            size_t zlevel,
+            sf::Color fill_color,
+            sf::Texture texture,
+            bool smoothing_enabled = true) {
+            ClearDrawing(id);
 
-    void Derma::ProcessControls(const Controls& controls) {
-        mIsInBounds = IsInBounds(controls.mMouse.mPosition);
+            auto drawing = std::make_shared<DrawingsTexture>();
 
-        DEvent event_base;
+            drawing->mType = DDrawingsType::Texture;
+            drawing->mID = id;
+            drawing->mSize = size;
+            drawing->mPosition = position;
+            drawing->mZLevel = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mTexture = texture;
+            drawing->mTextureSmoothing = smoothing_enabled;
+            this->mDrawings.emplace(zlevel, drawing);
 
-        event_base.mPosition = GetPositionGlobal();
-        event_base.mSize = mSize;
-        event_base.mZLevel = mZLevel;
-        event_base.mIsInBounds = mIsInBounds;
-        event_base.mControls.mMouse.mPosition = controls.mMouse.mPosition;
-        event_base.mControls.mMouse.mLPress = controls.mMouse.mLPress;
-        event_base.mControls.mMouse.mRPress = controls.mMouse.mRPress;
-        event_base.mControls.mMouse.mWPress = controls.mMouse.mWPress;
-        event_base.mIsVisible = mIsVisible;
-
-        DEvent event_move = event_base;
-
-        event_move.mType = DEventType::MouseMove;
-        mEventSystem.EmitEvent(event_move);
-
-        if ((event_base.mControls.mMouse.mLPress == true) && (mControlsPrevious.mMouse.mLPress == false)) {
-            DEvent event_mouse_down = event_base;
-
-            event_mouse_down.mType = DEventType::MouseLDown;
-            mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mControls.mMouse.mLPress == false) && (mControlsPrevious.mMouse.mLPress == true)) {
-            DEvent event_mouse_up = event_base;
-
-            event_mouse_up.mType = DEventType::MouseLUp;
-            mEventSystem.EmitEvent(event_mouse_up);
+            return self();
         }
 
-        if ((event_base.mControls.mMouse.mRPress == true) && (mControlsPrevious.mMouse.mRPress == false)) {
-            DEvent event_mouse_down = event_base;
+        Derived& ClearDrawing(const std::string& id) {
+            if (id.empty() == true) {
+                return self();
+            }
 
-            event_mouse_down.mType = DEventType::MouseRDown;
-            mEventSystem.EmitEvent(event_mouse_down);
-        } else if ((event_base.mControls.mMouse.mRPress == false) && (mControlsPrevious.mMouse.mRPress == true)) {
-            DEvent event_mouse_up = event_base;
+            std::vector<std::multimap<size_t, std::shared_ptr<DermaDrawings>>::iterator> to_erase;
 
-            event_mouse_up.mType = DEventType::MouseRUp;
-            mEventSystem.EmitEvent(event_mouse_up);
-        }
-
-        mControlsPrevious.mMouse.mLPress = event_base.mControls.mMouse.mLPress;
-        mControlsPrevious.mMouse.mRPress = event_base.mControls.mMouse.mRPress;
-    }
-
-    void Derma::ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global) {
-        sf::Vector2f pos_drawing = pos_global + drawing->mPosition;
-
-        switch (drawing->mType) {
-            case DDrawingsType::Rect: {
-                auto drawing_rect = std::static_pointer_cast<DrawingsRect>(drawing);
-
-                if (drawing_rect->mIsRounded == true) {
-                    // SFMLExt/sf::RoundedRectangleShape is not implemented yet
-                    break;
-                } else {
-                    sf::RectangleShape shape(drawing_rect->mSize);
-
-                    shape.setPosition(pos_drawing);
-                    shape.setFillColor(drawing_rect->mFillColor);
-
-                    if (drawing_rect->mIsOutlined == true) {
-                        shape.setOutlineThickness(drawing_rect->mOutlineThickness);
-                        shape.setOutlineColor(drawing_rect->mOutlineColor);
-                    }
-
-                    window.draw(shape);
-
-                    break;
+            for (auto iter = this->mDrawings.begin(); iter != this->mDrawings.end(); ++iter) {
+                if (iter->second->mID == id) {
+                    to_erase.push_back(iter);
                 }
             }
 
-            case DDrawingsType::Text: {
-                auto drawing_text = std::static_pointer_cast<DrawingsText>(drawing);
-                sf::Text text(drawing_text->mFont, drawing_text->mText, drawing_text->mFontSize);
-
-                text.setPosition(pos_drawing);
-                text.setFillColor(drawing_text->mFillColor);
-                window.draw(text);
-
-                break;
+            for (auto& iter : to_erase) {
+                this->mDrawings.erase(iter);
             }
 
-            case DDrawingsType::Image: {
-                auto drawing_image = std::static_pointer_cast<DrawingsTexture>(drawing);
-
-                sf::RectangleShape shape(drawing_image->mSize);
-
-                shape.setPosition(pos_drawing);
-                shape.setFillColor(drawing_image->mFillColor);
-
-                if (drawing_image->mTextureSmoothing == true) {
-                    drawing_image->mTexture.setSmooth(true);
-                }
-
-                shape.setTexture(&drawing_image->mTexture);
-                window.draw(shape);
-
-                break;
-            }
-
-            case DDrawingsType::Sprite: {
-                // Do stuff for sprite drawing
-                break;
-            }
+            return self();
         }
-    }
 
-    void Derma::ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global) {
-        sf::RectangleShape rect(mSize);
+        Derived& ClearDrawingsAll() {
+            this->mDrawings.clear();
 
-        rect.setPosition(pos_global);
-        rect.setFillColor(sf::Color(255, 255, 255, 128));
-        rect.setOutlineColor(sf::Color::White);
-        rect.setOutlineThickness(1.0f);
-
-        window.draw(rect);
-    }
-
-    Derma& Derma::DrawRect(
-        sf::Vector2f size,
-        sf::Vector2f position,
-        size_t zlevel,
-        sf::Color fill_color,
-        bool is_outlined,
-        float outline_thickness,
-        sf::Color outline_color,
-        bool is_rounded,
-        float rounding_radius) {
-        auto drawing = std::make_shared<DrawingsRect>();
-
-        drawing->mType = DDrawingsType::Rect;
-        drawing->mID = "";
-        drawing->mSize = size;
-        drawing->mPosition = position;
-        drawing->mZLevel = zlevel;
-        drawing->mFillColor = fill_color;
-        drawing->mIsOutlined = is_outlined;
-        drawing->mOutlineThickness = outline_thickness;
-        drawing->mOutlineColor = outline_color;
-        drawing->mIsRounded = is_rounded;
-        drawing->mRoundingRadius = rounding_radius;
-        mDrawings.emplace(zlevel, drawing);
-
-        return *this;
-    }
-
-    Derma& Derma::DrawRectDynamic(
-        const std::string& id,
-        sf::Vector2f size,
-        sf::Vector2f position,
-        size_t zlevel,
-        sf::Color fill_color,
-        bool is_outlined,
-        float outline_thickness,
-        sf::Color outline_color,
-        bool is_rounded,
-        float rounding_radius) {
-        ClearDrawing(id);
-
-        auto drawing = std::make_shared<DrawingsRect>();
-
-        drawing->mType = DDrawingsType::Rect;
-        drawing->mID = id;
-        drawing->mSize = size;
-        drawing->mPosition = position;
-        drawing->mZLevel = zlevel;
-        drawing->mFillColor = fill_color;
-        drawing->mIsOutlined = is_outlined;
-        drawing->mOutlineThickness = outline_thickness;
-        drawing->mOutlineColor = outline_color;
-        drawing->mIsRounded = is_rounded;
-        drawing->mRoundingRadius = rounding_radius;
-        mDrawings.emplace(zlevel, drawing);
-
-        return *this;
+            return self();
+        }
     };
-
-    Derma& Derma::DrawText(
-        sf::Font font,
-        size_t font_size,
-        sf::Vector2f position,
-        size_t zlevel,
-        sf::Color fill_color,
-        std::string text) {
-        auto drawing = std::make_shared<DrawingsText>();
-
-        drawing->mType = DDrawingsType::Text;
-        drawing->mID = "";
-        drawing->mFont = font;
-        drawing->mPosition = position;
-        drawing->mZLevel = zlevel;
-        drawing->mFillColor = fill_color;
-        drawing->mFontSize = font_size;
-        drawing->mText = std::move(text);
-        mDrawings.emplace(zlevel, drawing);
-
-        return *this;
-    }
-
-    Derma& Derma::DrawTextDynamic(
-        const std::string& id,
-        sf::Font font,
-        size_t font_size,
-        sf::Vector2f position,
-        size_t zlevel,
-        sf::Color fill_color,
-        std::string text) {
-        ClearDrawing(id);
-
-        auto drawing = std::make_shared<DrawingsText>();
-
-        drawing->mType = DDrawingsType::Text;
-        drawing->mID = id;
-        drawing->mFont = font;
-        drawing->mPosition = position;
-        drawing->mZLevel = zlevel;
-        drawing->mFillColor = fill_color;
-        drawing->mFontSize = font_size;
-        drawing->mText = std::move(text);
-        mDrawings.emplace(zlevel, drawing);
-
-        return *this;
-    };
-
-    Derma& Derma::DrawImage(
-        sf::Vector2f size,
-        sf::Vector2f position,
-        size_t zlevel,
-        sf::Color fill_color,
-        sf::Texture texture,
-        bool smoothing_enabled) {
-        auto drawing = std::make_shared<DrawingsTexture>();
-
-        drawing->mType = DDrawingsType::Image;
-        drawing->mID = "";
-        drawing->mSize = size;
-        drawing->mPosition = position;
-        drawing->mZLevel = zlevel;
-        drawing->mFillColor = fill_color;
-        drawing->mTexture = texture;
-        drawing->mTextureSmoothing = smoothing_enabled;
-        mDrawings.emplace(zlevel, drawing);
-
-        return *this;
-    }
-
-    Derma& Derma::ClearDrawing(const std::string& id) {
-        if (id.empty() == true) {
-            return *this;
-        }
-
-        std::vector<std::multimap<size_t, std::shared_ptr<DermaDrawings>>::iterator> to_erase;
-
-        for (auto iter = mDrawings.begin(); iter != mDrawings.end(); ++iter) {
-            if (iter->second->mID == id) {
-                to_erase.push_back(iter);
-            }
-        }
-
-        for (auto& iter : to_erase) {
-            mDrawings.erase(iter);
-        }
-
-        return *this;
-    }
-
-    Derma& Derma::ClearDrawingsAll() {
-        mDrawings.clear();
-
-        return *this;
-    }
 }

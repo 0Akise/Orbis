@@ -3,25 +3,72 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <typeinfo>
 #include <vector>
 
 #include "Orbis/Base/Controls.hpp"
 #include "Orbis/Base/ResourceVault.hpp"
 #include "Orbis/Derma/Derma.hpp"
+#include "Orbis/Derma/DermaComponents.hpp"
 
 namespace Orbis {
     class UI {
     private:
-        std::vector<std::shared_ptr<Derma>> mDermas;
+        std::vector<std::shared_ptr<DermaInterface>> mDermas;
         size_t mIDCounter;
         Controls mControls;
         ResourceVault mResourceVault;
 
-        std::shared_ptr<Derma> Create_Instance(DType type, std::shared_ptr<Derma> parent) {
-            auto derma = Derma::Create(type, mIDCounter++);
+        template <typename T>
+        std::shared_ptr<T> Create_Instance(DType type, std::shared_ptr<DermaInterface> parent) {
+            std::shared_ptr<T> derma;
+
+            switch (type) {
+                case DType::DFrame: {
+                    if constexpr (std::is_same_v<T, DFrame>) {
+                        auto frame = std::make_shared<DFrame>(mIDCounter++);
+
+                        frame->Initialize();
+                        derma = frame;
+                    } else {
+                        throw std::runtime_error("Type mismatch: Expected DFrame");
+                    }
+                    break;
+                }
+                case DType::DWindow: {
+                    if constexpr (std::is_same_v<T, DWindow>) {
+                        auto window = std::make_shared<DWindow>(mIDCounter++);
+
+                        window->Initialize();
+                        derma = window;
+                    } else {
+                        throw std::runtime_error("Type mismatch: Expected DWindow");
+                    }
+                    break;
+                }
+                case DType::DButton: {
+                    if constexpr (std::is_same_v<T, DButton>) {
+                        auto button = std::make_shared<DButton>(mIDCounter++);
+
+                        button->Initialize();
+                        derma = button;
+                    } else {
+                        throw std::runtime_error("Type mismatch: Expected DButton");
+                    }
+                    break;
+                }
+                default: {
+                    throw std::runtime_error("Unsupported component type");
+
+                    break;
+                }
+            }
+
+            if (derma == nullptr) {
+                throw std::runtime_error("Failed to create component");
+            }
 
             derma->SetRegistered(true);
-
             mDermas.push_back(derma);
 
             if (parent != nullptr) {
@@ -83,12 +130,24 @@ namespace Orbis {
             return instance;
         }
 
-        static std::shared_ptr<Derma> Create(DType type) {
-            return GetUISystem().Create_Instance(type, nullptr);
+        template <typename T>
+        static T& Create() {
+            static_assert(std::is_base_of<DermaInterface, T>::value, "T must derive from DermaInterface");
+
+            auto pointer = GetUISystem().Create_Instance<T>(DTypeMap<T>::value, nullptr);
+
+            return *pointer;
         }
 
-        static std::shared_ptr<Derma> CreateChild(DType type, Derma& parent) {
-            return GetUISystem().Create_Instance(type, parent.shared_from_this());
+        template <typename T, typename ParentType>
+        static T& CreateChild(ParentType& parent) {
+            static_assert(std::is_base_of<DermaInterface, T>::value, "T must derive from DermaInterface");
+            static_assert(std::is_base_of<DermaInterface, ParentType>::value, "Parent must derive from DermaInterface");
+
+            auto pointer_parent = parent.template GetSharedFromThis<ParentType>();
+            auto pointer = GetUISystem().Create_Instance<T>(DTypeMap<T>::value, pointer_parent);
+
+            return static_cast<T&>(*pointer);
         }
 
         static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
