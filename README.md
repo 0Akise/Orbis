@@ -5,6 +5,7 @@
 <ins>[English 🇬🇧](https://github.com/0Akise/Orbis/blob/master/README.md)</ins> | [日本語 🇯🇵](https://github.com/0Akise/Orbis/blob/master/README_JP.md)
 
 ![grafik](https://github.com/user-attachments/assets/b1c4275b-0c8a-47dc-a6ef-ea0b1547d495)
+
 (screenshot of `basic_ui` example)
 
 - A modern C++20 UI library built on SFML3, offering a highly customizable yet user-friendly interface for creating both 2D and 3D GUIs.
