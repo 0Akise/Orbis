@@ -4,15 +4,18 @@
 
 <ins>[English 🇬🇧](https://github.com/0Akise/Orbis/blob/master/README.md)</ins> | [日本語 🇯🇵](https://github.com/0Akise/Orbis/blob/master/README_JP.md)
 
+![grafik](https://github.com/user-attachments/assets/b1c4275b-0c8a-47dc-a6ef-ea0b1547d495)
+(screenshot of `basic_ui` example)
+
 - A modern C++20 UI library built on SFML3, offering a highly customizable yet user-friendly interface for creating both 2D and 3D GUIs.
 - Orbis provides support for developers who want to build applications and games with SFML without having to develop their own GUI system from scratch.
 
 ## Features
-- Header-only library for seamless integration
-- Modern C++20 features for clean, efficient code
-- Built on SFML3 with Vulkan support
-- Highly customizable UI Components
-- Intuitive API for rapid development
+- 💠 Header-only library for seamless integration
+- 💥 Modern C++20 features for clean, efficient code
+- ✅ Built on SFML3 with Vulkan support
+- 💚 Highly customizable UI Components
+- 💨 Intuitive API for rapid development
 
 ## What's Derma?
 _Derma_ means "Skin" in ancient Greek (the same _derma_ as in _dermatologist_). Think of it like weapon skins in games - you have a base weapon that can be decorated with various designs.
@@ -78,7 +81,7 @@ If you want to try out examples, run with following:
 ```
 
 # Roadmap
-- [ ] implementation of DButton
+- [x] implementation of DButton
 
 # Contribution
 Please check `CONTRIBUTION.md` for guidelines and information on how to contribute to the project.
