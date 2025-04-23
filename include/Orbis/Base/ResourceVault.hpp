@@ -12,7 +12,6 @@ namespace Orbis {
     private:
         std::unordered_map<std::string, std::shared_ptr<sf::Font>> mFonts;
         std::unordered_map<std::string, std::shared_ptr<sf::Texture>> mTextures;
-        std::unordered_map<std::string, std::shared_ptr<sf::Sprite>> mSprites;
 
     public:
         ResourceVault() = default;
@@ -78,14 +77,9 @@ namespace Orbis {
             mTextures.clear();
         }
 
-        void ClearSprites() {
-            mSprites.clear();
-        }
-
         void ClearAllResources() {
             ClearFonts();
             ClearTextures();
-            ClearSprites();
         }
     };
 }

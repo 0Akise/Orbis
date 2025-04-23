@@ -9,39 +9,107 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
+#include "Orbis/Derma/DermaBase.hpp"
+#include "Orbis/Derma/DermaCommons.hpp"
 #include "Orbis/Derma/DermaDrawings.hpp"
-#include "Orbis/Derma/DermaEnums.hpp"
-#include "Orbis/Derma/DermaOptions.hpp"
+#include "Orbis/Derma/DermaEvent.hpp"
 
 namespace Orbis {
     template <typename Derived>
-    class Derma : public DermaInterface, public std::enable_shared_from_this<Derma<Derived>> {
+    class Derma : public DermaBase {
     private:
-        std::weak_ptr<DermaInterface> mParent;
-        std::vector<std::shared_ptr<DermaInterface>> mChildren;
+        DOption mOptionFlag = DOption::None;
+        bool mIsSelected = false;
+        bool mIsMoving = false;
+        bool mIsResizing = false;
+        sf::Vector2f mOffsetOption;
 
         size_t mID;
-        std::string mName;
-        sf::Vector2f mSize;
-        sf::Vector2f mPosition;
-        size_t mZLevel;
+        std::string mName = "Unnamed";
+        sf::Vector2f mSize = {0, 0};
+        sf::Vector2f mPosition = {0, 0};
+        size_t mZLevel = 0;
 
         std::multimap<size_t, std::shared_ptr<DermaDrawings>> mDrawings;
 
         Controls mControlsPrevious;
+        bool mIsVisible = true;
+        bool mIsInBounds = false;
 
-        bool mIsVisible;
-        bool mIsRegistered;
-        bool mIsInBounds;
+        void InitializeOptions() {
+            mEventSystem.DeregisterListener();
 
-        std::vector<std::shared_ptr<DermaOption>> mOptions;
-        std::weak_ptr<Selectable> mOptionSelectable;
-        std::weak_ptr<Movable> mOptionMovable;
-        std::weak_ptr<Resizable> mOptionResizable;
+            if (HasOption(DOption::Selectable))
+                RegisterOption(DOption::Selectable);
+            if (HasOption(DOption::Movable))
+                RegisterOption(DOption::Movable);
+            if (HasOption(DOption::Resizable))
+                RegisterOption(DOption::Resizable);
+        }
 
-        bool mIsDebugMode;
+        void RegisterOption(DOption flag) {
+            switch (flag) {
+                case DOption::Selectable:
+                    mEventSystem.RegisterListener(DEventType::MouseDown, [this](const DEvent& event) {
+                        mIsSelected = event.mIsInBounds;
+                    });
+
+                    break;
+
+                case DOption::Movable:
+                    mEventSystem.RegisterListener(DEventType::MouseLDown, [this](const DEvent& event) {
+                        if (event.mIsInBounds == true) {
+                            mIsMoving = true;
+                            mOffsetOption = event.mControls.mMouse.mPosition - event.mPosition;
+                        }
+                    });
+                    mEventSystem.RegisterListener(DEventType::MouseMove, [this](const DEvent& event) {
+                        if (mIsMoving == true) {
+                            SetPosition(event.mControls.mMouse.mPosition - mOffsetOption);
+                        }
+                    });
+                    mEventSystem.RegisterListener(DEventType::MouseLUp, [this](const DEvent&) {
+                        mIsMoving = false;
+                    });
+
+                    break;
+
+                case DOption::Resizable:
+                    mEventSystem.RegisterListener(DEventType::MouseRDown, [this](const DEvent& event) {
+                        sf::Vector2f window_br = event.mPosition + event.mSize;
+                        sf::Vector2f size_handle = {10.0f, 10.0f};
+                        sf::Vector2f pos_handle = {window_br.x - 10.0f, window_br.y - 10.0f};
+
+                        if (sf::Rect<float>(pos_handle, size_handle).contains(event.mControls.mMouse.mPosition) == true) {
+                            mIsResizing = true;
+                            mOffsetOption = event.mControls.mMouse.mPosition - window_br;
+                        }
+                    });
+                    mEventSystem.RegisterListener(DEventType::MouseMove, [this](const DEvent& event) {
+                        if (mIsResizing == true) {
+                            sf::Vector2f pos_new_br = event.mControls.mMouse.mPosition - mOffsetOption;
+                            sf::Vector2f size_new = pos_new_br - event.mPosition;
+                            sf::Vector2f minimum_size = {10, 10};
+
+                            size_new.x = std::max(size_new.x, minimum_size.x);
+                            size_new.y = std::max(size_new.y, minimum_size.y);
+                            SetSize(size_new);
+                        }
+                    });
+                    mEventSystem.RegisterListener(DEventType::MouseRUp, [this](const DEvent&) {
+                        mIsResizing = false;
+                    });
+
+                    break;
+
+                default:
+                    break;
+            }
+        }
 
     protected:
+        using Self = Derived;
+
         DermaEventSystem mEventSystem;
 
         Derived& self() {
@@ -53,186 +121,38 @@ namespace Orbis {
         }
 
     public:
-        Derma(DType, size_t id)
-            : mID(id),
-              mName("Unnamed"),
-              mSize({0.0f, 0.0f}),
-              mPosition({0.0f, 0.0f}),
-              mZLevel(0),
-              mIsVisible(true),
-              mIsRegistered(false),
-              mIsInBounds(false),
-              mIsDebugMode(false) {}
+        explicit Derma(size_t id) : mID(id) {}
 
-        static std::shared_ptr<DermaInterface> Create(DType type, size_t id) {
-            return std::make_shared<DermaInterface>(type, id);
-        }
+        Derived& AddOption(DOption flag) {
+            if ((mOptionFlag & flag) == DOption::None) {
+                mOptionFlag = static_cast<DOption>(static_cast<uint32_t>(mOptionFlag) | static_cast<uint32_t>(flag));
 
-        void SetParent(std::shared_ptr<DermaInterface> parent) override {
-            mParent = parent;
-        }
-
-        void AddChild(std::shared_ptr<DermaInterface> child) override {
-            if (auto parent = child->GetParent()) {
-                parent->RemoveChild(child);
+                RegisterOption(flag);
             }
-
-            child->SetParent(this->shared_from_this());
-            mChildren.push_back(child);
-
-            DEvent event_parent_changed;
-            event_parent_changed.mType = DEventType::ParentChanged;
-            mEventSystem.EmitEvent(event_parent_changed);
-
-            DEvent event_child_added;
-            event_child_added.mType = DEventType::ChildAdded;
-            mEventSystem.EmitEvent(event_child_added);
-        }
-
-        void RemoveChild(const std::shared_ptr<DermaInterface>& child) override {
-            auto iter = std::find(mChildren.begin(), mChildren.end(), child);
-
-            if (iter != mChildren.end()) {
-                (*iter)->SetParent(nullptr);
-                mChildren.erase(iter);
-
-                DEvent event_child_removed;
-                event_child_removed.mType = DEventType::ChildRemoved;
-                mEventSystem.EmitEvent(event_child_removed);
-            }
-        }
-
-        std::shared_ptr<DermaInterface> GetParent() const override {
-            return mParent.lock();
-        }
-
-        const std::vector<std::shared_ptr<DermaInterface>>& GetChildren() const override {
-            return mChildren;
-        }
-
-        template <typename T, typename... Args>
-        std::shared_ptr<T> AddOption(Args&&... args) {
-            auto option = std::make_shared<T>(this->shared_from_this(), std::forward<Args>(args)...);
-            auto notify = [this](DEventType type, const void* data) {
-                DEvent event;
-
-                event.mType = type;
-
-                if (type == DEventType::Moved) {
-                    const sf::Vector2f* position = static_cast<const sf::Vector2f*>(data);
-                    event.mPosition = *position;
-                    this->mPosition = *position;
-                } else if (type == DEventType::Resized) {
-                    const sf::Vector2f* size = static_cast<const sf::Vector2f*>(data);
-                    event.mSize = *size;
-                    this->mSize = *size;
-                }
-
-                this->mEventSystem.EmitEvent(event);
-            };
-
-            option->Initialize(this->mEventSystem, notify);
-            this->mOptions.push_back(std::move(option));
-
-            return option;
-        }
-
-        template <typename T>
-        void RemoveOption() {
-            if constexpr (std::is_same_v<T, Selectable>) {
-                this->mOptionSelectable.reset();
-            }
-
-            if constexpr (std::is_same_v<T, Movable>) {
-                this->mOptionMovable.reset();
-            }
-
-            if constexpr (std::is_same_v<T, Resizable>) {
-                this->mOptionResizable.reset();
-            }
-
-            this->mOptions.erase(
-                std::remove_if(this->mOptions.begin(), this->mOptions.end(), [](const auto& option) {
-                    return dynamic_cast<T*>(option.get()) != nullptr;
-                }),
-                this->mOptions.end());
-        }
-
-        template <typename T>
-        T* GetOption() const {
-            for (const auto& option : this->mOptions) {
-                auto* casted = dynamic_cast<T*>(option.get());
-
-                if (casted != nullptr) {
-                    return casted;
-                }
-            }
-
-            return nullptr;
-        }
-
-        Derived& SetOptions(DOption flags) {
-            bool has_selectable = HasOptionFlag(flags, DOption::Selectable);
-            SetSelectable(has_selectable);
-
-            bool has_movable = HasOptionFlag(flags, DOption::Movable);
-            SetMovable(has_movable);
-
-            bool has_resizable = HasOptionFlag(flags, DOption::Resizable);
-            SetResizable(has_resizable);
 
             return self();
         }
 
-        void SetSelectable(bool is_selectable) {
-            if ((is_selectable == true) && (this->mOptionSelectable.expired() == true)) {
-                this->mOptionSelectable = AddOption<Selectable>();
-            } else if ((is_selectable == false) && (this->mOptionSelectable.expired() == false)) {
-                RemoveOption<Selectable>();
+        Derived& RemoveOption(DOption flag) {
+            if ((mOptionFlag & flag) == flag) {
+                mOptionFlag = static_cast<DOption>(static_cast<uint32_t>(mOptionFlag) & ~static_cast<uint32_t>(flag));
+
+                InitializeOptions();
             }
+
+            return self();
         }
 
-        void SetMovable(bool is_movable) {
-            if ((is_movable == true) && (this->mOptionMovable.expired() == true)) {
-                this->mOptionMovable = AddOption<Movable>(this->mPosition);
-            } else if ((is_movable == false) && (this->mOptionMovable.expired() == false)) {
-                RemoveOption<Movable>();
-            }
+        Derived& SetOptions(DOption flags) {
+            mOptionFlag = flags;
+
+            InitializeOptions();
+
+            return self();
         }
 
-        void SetResizable(bool is_resizable) {
-            if ((is_resizable == true) && (this->mOptionResizable.expired() == true)) {
-                this->mOptionResizable = AddOption<Resizable>(this->mSize);
-            } else if ((is_resizable == false) && (this->mOptionResizable.expired() == false)) {
-                RemoveOption<Resizable>();
-            }
-        }
-
-        bool IsSelected() const {
-            auto selectable = this->mOptionSelectable.lock();
-
-            if (selectable != nullptr)
-                return selectable->GetSelectedStatus();
-
-            return false;
-        }
-
-        bool IsMoved() const {
-            auto movable = this->mOptionMovable.lock();
-
-            if (movable != nullptr)
-                return movable->GetMovedStatus();
-
-            return false;
-        }
-
-        bool IsResized() const {
-            auto resizable = this->mOptionResizable.lock();
-
-            if (resizable != nullptr)
-                return resizable->GetResizedStatus();
-
-            return false;
+        bool HasOption(DOption flag) const noexcept {
+            return (mOptionFlag & flag) == flag;
         }
 
         bool HasOptionFlag(DOption flags, DOption flag) const {
@@ -248,7 +168,7 @@ namespace Orbis {
 
         template <typename T = Derived>
         std::shared_ptr<T> GetSharedFromThis() {
-            return std::static_pointer_cast<T>(this->shared_from_this());
+            return std::dynamic_pointer_cast<T>(DermaBase::shared_from_this());
         }
 
         size_t GetID() const override {
@@ -268,12 +188,10 @@ namespace Orbis {
         }
 
         sf::Vector2f GetPositionGlobal() const override {
-            auto parent = mParent.lock();
+            if (auto parent = mParent.lock())
+                return parent->GetPositionGlobal() + mPosition;
 
-            if (parent == nullptr)
-                return mPosition;
-
-            return parent->GetPositionGlobal() + mPosition;
+            return mPosition;
         }
 
         size_t GetZLevel() const {
@@ -284,16 +202,9 @@ namespace Orbis {
             return mIsVisible;
         }
 
-        bool GetRegisteredStatus() const {
-            return mIsRegistered;
-        }
-
-        bool GetDebugModeStatus() const {
-            return mIsDebugMode;
-        }
-
-        Derived& SetName(std::string name) {
+        Derived& SetName(const std::string& name) {
             mName = std::move(name);
+
             return self();
         }
 
@@ -329,18 +240,8 @@ namespace Orbis {
             return self();
         }
 
-        Derived& SetRegistered(bool is_registered) {
-            mIsRegistered = is_registered;
-            return self();
-        }
-
-        Derived& SetDebugMode(bool is_debugmode) {
-            mIsDebugMode = is_debugmode;
-            return self();
-        }
-
         void Update(const Controls& controls) override {
-            if (this->mIsVisible == false)
+            if (mIsVisible == false)
                 return;
 
             ProcessControls(controls);
@@ -351,17 +252,13 @@ namespace Orbis {
         }
 
         void Render(sf::RenderWindow& window) override {
-            if (this->mIsVisible == false)
+            if (mIsVisible == false)
                 return;
 
-            sf::Vector2f pos_global = this->GetPositionGlobal();
+            sf::Vector2f pos_global = GetPositionGlobal();
 
-            for (const auto& [zlevel, drawing] : this->mDrawings) {
+            for (const auto& [zlevel, drawing] : mDrawings) {
                 ProcessDrawings(window, drawing, pos_global);
-            }
-
-            if (this->mIsDebugMode == true) {
-                ProcessDebugMode(window, pos_global);
             }
 
             for (auto& child : mChildren) {
@@ -370,49 +267,49 @@ namespace Orbis {
         }
 
         void ProcessControls(const Controls& controls) {
-            this->mIsInBounds = this->IsInBounds(controls.mMouse.mPosition);
+            mIsInBounds = IsInBounds(controls.mMouse.mPosition);
 
             DEvent event_base;
-            event_base.mPosition = this->GetPositionGlobal();
-            event_base.mSize = this->mSize;
-            event_base.mZLevel = this->mZLevel;
-            event_base.mIsInBounds = this->mIsInBounds;
+            event_base.mPosition = GetPositionGlobal();
+            event_base.mSize = mSize;
+            event_base.mZLevel = mZLevel;
+            event_base.mIsInBounds = mIsInBounds;
             event_base.mControls.mMouse.mPosition = controls.mMouse.mPosition;
             event_base.mControls.mMouse.mLPress = controls.mMouse.mLPress;
             event_base.mControls.mMouse.mRPress = controls.mMouse.mRPress;
             event_base.mControls.mMouse.mWPress = controls.mMouse.mWPress;
-            event_base.mIsVisible = this->mIsVisible;
+            event_base.mIsVisible = mIsVisible;
 
             DEvent event_move = event_base;
             event_move.mType = DEventType::MouseMove;
-            this->mEventSystem.EmitEvent(event_move);
+            mEventSystem.EmitEvent(event_move);
 
-            if ((event_base.mControls.mMouse.mLPress == true) && (this->mControlsPrevious.mMouse.mLPress == false)) {
+            if ((event_base.mControls.mMouse.mLPress == true) && (mControlsPrevious.mMouse.mLPress == false)) {
                 DEvent event_mouse_down = event_base;
 
                 event_mouse_down.mType = DEventType::MouseLDown;
-                this->mEventSystem.EmitEvent(event_mouse_down);
-            } else if ((event_base.mControls.mMouse.mLPress == false) && (this->mControlsPrevious.mMouse.mLPress == true)) {
+                mEventSystem.EmitEvent(event_mouse_down);
+            } else if ((event_base.mControls.mMouse.mLPress == false) && (mControlsPrevious.mMouse.mLPress == true)) {
                 DEvent event_mouse_up = event_base;
 
                 event_mouse_up.mType = DEventType::MouseLUp;
-                this->mEventSystem.EmitEvent(event_mouse_up);
+                mEventSystem.EmitEvent(event_mouse_up);
             }
 
-            if ((event_base.mControls.mMouse.mRPress == true) && (this->mControlsPrevious.mMouse.mRPress == false)) {
+            if ((event_base.mControls.mMouse.mRPress == true) && (mControlsPrevious.mMouse.mRPress == false)) {
                 DEvent event_mouse_down = event_base;
 
                 event_mouse_down.mType = DEventType::MouseRDown;
-                this->mEventSystem.EmitEvent(event_mouse_down);
-            } else if ((event_base.mControls.mMouse.mRPress == false) && (this->mControlsPrevious.mMouse.mRPress == true)) {
+                mEventSystem.EmitEvent(event_mouse_down);
+            } else if ((event_base.mControls.mMouse.mRPress == false) && (mControlsPrevious.mMouse.mRPress == true)) {
                 DEvent event_mouse_up = event_base;
 
                 event_mouse_up.mType = DEventType::MouseRUp;
-                this->mEventSystem.EmitEvent(event_mouse_up);
+                mEventSystem.EmitEvent(event_mouse_up);
             }
 
-            this->mControlsPrevious.mMouse.mLPress = event_base.mControls.mMouse.mLPress;
-            this->mControlsPrevious.mMouse.mRPress = event_base.mControls.mMouse.mRPress;
+            mControlsPrevious.mMouse.mLPress = event_base.mControls.mMouse.mLPress;
+            mControlsPrevious.mMouse.mRPress = event_base.mControls.mMouse.mRPress;
         }
 
         void ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<DermaDrawings>& drawing, const sf::Vector2f& pos_global) {
@@ -469,22 +366,7 @@ namespace Orbis {
 
                     break;
                 }
-
-                case DDrawingsType::Sprite: {
-                    break;
-                }
             }
-        }
-
-        void ProcessDebugMode(sf::RenderWindow& window, const sf::Vector2f& pos_global) {
-            sf::RectangleShape rect(this->mSize);
-
-            rect.setPosition(pos_global);
-            rect.setFillColor(sf::Color(255, 255, 255, 128));
-            rect.setOutlineColor(sf::Color::White);
-            rect.setOutlineThickness(1.0f);
-
-            window.draw(rect);
         }
 
         Derived& DrawRect(
@@ -510,7 +392,7 @@ namespace Orbis {
             drawing->mOutlineColor = outline_color;
             drawing->mIsRounded = is_rounded;
             drawing->mRoundingRadius = rounding_radius;
-            this->mDrawings.emplace(zlevel, drawing);
+            mDrawings.emplace(zlevel, drawing);
 
             return self();
         }
@@ -531,7 +413,7 @@ namespace Orbis {
             auto drawing = std::make_shared<DrawingsRect>();
 
             drawing->mType = DDrawingsType::Rect;
-            drawing->mID = id;
+            drawing->mID = std::move(id);
             drawing->mSize = size;
             drawing->mPosition = position;
             drawing->mZLevel = zlevel;
@@ -541,7 +423,7 @@ namespace Orbis {
             drawing->mOutlineColor = outline_color;
             drawing->mIsRounded = is_rounded;
             drawing->mRoundingRadius = rounding_radius;
-            this->mDrawings.emplace(zlevel, drawing);
+            mDrawings.emplace(zlevel, drawing);
 
             return self();
         }
@@ -552,7 +434,7 @@ namespace Orbis {
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
-            std::string text = "") {
+            const std::string& text = "") {
             auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType = DDrawingsType::Text;
@@ -563,7 +445,7 @@ namespace Orbis {
             drawing->mFillColor = fill_color;
             drawing->mFontSize = font_size;
             drawing->mText = std::move(text);
-            this->mDrawings.emplace(zlevel, drawing);
+            mDrawings.emplace(zlevel, drawing);
 
             return self();
         }
@@ -575,20 +457,20 @@ namespace Orbis {
             sf::Vector2f position,
             size_t zlevel,
             sf::Color fill_color,
-            std::string text = "") {
+            const std::string& text = "") {
             ClearDrawing(id);
 
             auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType = DDrawingsType::Text;
-            drawing->mID = id;
+            drawing->mID = std::move(id);
             drawing->mFont = font;
             drawing->mPosition = position;
             drawing->mZLevel = zlevel;
             drawing->mFillColor = fill_color;
             drawing->mFontSize = font_size;
             drawing->mText = std::move(text);
-            this->mDrawings.emplace(zlevel, drawing);
+            mDrawings.emplace(zlevel, drawing);
 
             return self();
         }
@@ -610,7 +492,7 @@ namespace Orbis {
             drawing->mFillColor = fill_color;
             drawing->mTexture = texture;
             drawing->mTextureSmoothing = smoothing_enabled;
-            this->mDrawings.emplace(zlevel, drawing);
+            mDrawings.emplace(zlevel, drawing);
 
             return self();
         }
@@ -628,14 +510,14 @@ namespace Orbis {
             auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType = DDrawingsType::Texture;
-            drawing->mID = id;
+            drawing->mID = std::move(id);
             drawing->mSize = size;
             drawing->mPosition = position;
             drawing->mZLevel = zlevel;
             drawing->mFillColor = fill_color;
             drawing->mTexture = texture;
             drawing->mTextureSmoothing = smoothing_enabled;
-            this->mDrawings.emplace(zlevel, drawing);
+            mDrawings.emplace(zlevel, drawing);
 
             return self();
         }
@@ -647,21 +529,21 @@ namespace Orbis {
 
             std::vector<std::multimap<size_t, std::shared_ptr<DermaDrawings>>::iterator> to_erase;
 
-            for (auto iter = this->mDrawings.begin(); iter != this->mDrawings.end(); ++iter) {
+            for (auto iter = mDrawings.begin(); iter != mDrawings.end(); ++iter) {
                 if (iter->second->mID == id) {
                     to_erase.push_back(iter);
                 }
             }
 
             for (auto& iter : to_erase) {
-                this->mDrawings.erase(iter);
+                mDrawings.erase(iter);
             }
 
             return self();
         }
 
         Derived& ClearDrawingsAll() {
-            this->mDrawings.clear();
+            mDrawings.clear();
 
             return self();
         }

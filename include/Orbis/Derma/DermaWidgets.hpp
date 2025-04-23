@@ -5,16 +5,22 @@
 #include <SFML/Graphics.hpp>
 
 #include "Orbis/Derma/Derma.hpp"
-#include "Orbis/Derma/DermaEnums.hpp"
+#include "Orbis/Derma/DermaCommons.hpp"
 
 namespace Orbis {
+    enum class DButtonState {
+        Normal,
+        Hover,
+        Pressed,
+    };
+
     class DFrame : public Derma<DFrame> {
     public:
         explicit DFrame(size_t id)
-            : Derma<DFrame>(DType::DFrame, id) {}
+            : Derma<DFrame>(id) {}
 
-        void Initialize() override {
-            SetOptions(DOption::None);
+        void Initialize() {
+            this->SetOptions(DOption::None);
         }
     };
 
@@ -22,39 +28,22 @@ namespace Orbis {
     private:
         std::string mTitle = "Unnamed";
         float mTitlebarHeight = 20;
-        bool mIsMoving;
+        [[maybe_unused]] bool mIsMoving;
         sf::Vector2f mMoveOffset;
 
     public:
         explicit DWindow(size_t id)
-            : Derma<DWindow>(DType::DWindow, id),
+            : Derma<DWindow>(id),
               mIsMoving(false) {}
 
-        void Initialize() override {
-            SetOptions(DOption::Movable);
-
-            mEventSystem.RegisterListener(DEventType::MouseLDown, [this](const DEvent& event) {
-                if (IsInTitlebar(event.mControls.mMouse.mPosition)) {
-                    mIsMoving = true;
-                    mMoveOffset = event.mControls.mMouse.mPosition - GetPositionGlobal();
-                }
-            });
-
-            mEventSystem.RegisterListener(DEventType::MouseLUp, [this](const DEvent&) {
-                mIsMoving = false;
-            });
-
-            mEventSystem.RegisterListener(DEventType::MouseMove, [this](const DEvent& event) {
-                if (mIsMoving == true) {
-                    SetPosition(event.mControls.mMouse.mPosition - mMoveOffset);
-                }
-            });
+        void Initialize() {
+            this->SetOptions(DOption::Movable);
         }
 
         bool IsInTitlebar(const sf::Vector2f& position) const {
-            sf::Vector2f pos_global = GetPositionGlobal();
+            sf::Vector2f pos_global = this->GetPositionGlobal();
 
-            return (pos_global.x <= position.x && position.x <= pos_global.x + GetSize().x &&
+            return (pos_global.x <= position.x && position.x <= pos_global.x + this->GetSize().x &&
                     pos_global.y <= position.y && position.y <= pos_global.y + mTitlebarHeight);
         }
 
@@ -78,20 +67,20 @@ namespace Orbis {
 
     public:
         explicit DButton(size_t id)
-            : Derma<DButton>(DType::DButton, id),
+            : Derma<DButton>(id),
               mState(DButtonState::Normal),
               mText("") {}
 
-        void Initialize() override {
-            SetOptions(DOption::Selectable);
+        void Initialize() {
+            this->SetOptions(DOption::Selectable);
 
-            mEventSystem.RegisterListener(DEventType::MouseLDown, [this](const DEvent& event) {
+            this->mEventSystem.RegisterListener(DEventType::MouseLDown, [this](const DEvent& event) {
                 if (event.mIsInBounds == true) {
                     mState = DButtonState::Pressed;
                 }
             });
 
-            mEventSystem.RegisterListener(DEventType::MouseLUp, [this](const DEvent& event) {
+            this->mEventSystem.RegisterListener(DEventType::MouseLUp, [this](const DEvent& event) {
                 if ((event.mIsInBounds == true) && (mState == DButtonState::Pressed)) {
                     if (mCallback != nullptr) {
                         mCallback();
@@ -105,13 +94,13 @@ namespace Orbis {
                 }
             });
 
-            mEventSystem.RegisterListener(DEventType::MouseEnter, [this](const DEvent& event) {
+            this->mEventSystem.RegisterListener(DEventType::MouseEnter, [this](const DEvent& event) {
                 if (event.mControls.mMouse.mLPress == false) {
                     mState = DButtonState::Hover;
                 }
             });
 
-            mEventSystem.RegisterListener(DEventType::MouseLeave, [this](const DEvent& event) {
+            this->mEventSystem.RegisterListener(DEventType::MouseLeave, [this](const DEvent& event) {
                 if (event.mControls.mMouse.mLPress == false) {
                     mState = DButtonState::Normal;
                 }
@@ -146,17 +135,19 @@ namespace Orbis {
                     break;
             }
 
-            return *this;
+            return self();
         }
 
-        DButton& SetText(std::string text) {
+        DButton& SetText(const std::string& text) {
             mText = std::move(text);
-            return *this;
+
+            return self();
         }
 
         DButton& SetCallback(std::function<void()> callback) {
             mCallback = std::move(callback);
-            return *this;
+
+            return self();
         }
     };
 

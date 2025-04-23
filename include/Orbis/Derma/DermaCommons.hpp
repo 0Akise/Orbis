@@ -55,17 +55,4 @@ namespace Orbis {
         ChildAdded,
         ChildRemoved
     };
-
-    enum class DDrawingsType {
-        Rect,
-        Text,
-        Texture,
-        Sprite,
-    };
-
-    enum class DButtonState {
-        Normal,
-        Hover,
-        Pressed,
-    };
 }

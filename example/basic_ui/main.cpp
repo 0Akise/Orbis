@@ -72,7 +72,7 @@ int main() {
             hp_anim.mIsAnimating = true;
             hp_anim.mStartTime = std::chrono::steady_clock::now();
             hp_anim.mFrom = hp_anim.mCurrent;
-            hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mArmorMax;
+            hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
     auto& button_health_down = UI::CreateChild<DButton>(window_example1);

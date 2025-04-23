@@ -8,7 +8,7 @@
 #include <SFML/System.hpp>
 
 #include "Orbis/Base/Controls.hpp"
-#include "Orbis/Derma/DermaEnums.hpp"
+#include "Orbis/Derma/DermaCommons.hpp"
 
 namespace Orbis {
     struct DEvent {
@@ -34,6 +34,10 @@ namespace Orbis {
     public:
         void RegisterListener(DEventType event_type, EventCallback callback) {
             mListeners[event_type].push_back(std::move(callback));
+        }
+
+        void DeregisterListener() {
+            // do stuff
         }
 
         void EmitEvent(const DEvent& event) {

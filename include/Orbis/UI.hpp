@@ -9,114 +9,21 @@
 #include "Orbis/Base/Controls.hpp"
 #include "Orbis/Base/ResourceVault.hpp"
 #include "Orbis/Derma/Derma.hpp"
-#include "Orbis/Derma/DermaComponents.hpp"
+#include "Orbis/Derma/DermaWidgets.hpp"
 
 namespace Orbis {
     class UI {
     private:
-        std::vector<std::shared_ptr<DermaInterface>> mDermas;
+        std::vector<std::shared_ptr<DermaBase>> mDermas;
         size_t mIDCounter;
         Controls mControls;
         ResourceVault mResourceVault;
 
-        template <typename T>
-        std::shared_ptr<T> Create_Instance(DType type, std::shared_ptr<DermaInterface> parent) {
-            std::shared_ptr<T> derma;
-
-            switch (type) {
-                case DType::DFrame: {
-                    if constexpr (std::is_same_v<T, DFrame>) {
-                        auto frame = std::make_shared<DFrame>(mIDCounter++);
-
-                        frame->Initialize();
-                        derma = frame;
-                    } else {
-                        throw std::runtime_error("Type mismatch: Expected DFrame");
-                    }
-                    break;
-                }
-                case DType::DWindow: {
-                    if constexpr (std::is_same_v<T, DWindow>) {
-                        auto window = std::make_shared<DWindow>(mIDCounter++);
-
-                        window->Initialize();
-                        derma = window;
-                    } else {
-                        throw std::runtime_error("Type mismatch: Expected DWindow");
-                    }
-                    break;
-                }
-                case DType::DButton: {
-                    if constexpr (std::is_same_v<T, DButton>) {
-                        auto button = std::make_shared<DButton>(mIDCounter++);
-
-                        button->Initialize();
-                        derma = button;
-                    } else {
-                        throw std::runtime_error("Type mismatch: Expected DButton");
-                    }
-                    break;
-                }
-                default: {
-                    throw std::runtime_error("Unsupported component type");
-
-                    break;
-                }
-            }
-
-            if (derma == nullptr) {
-                throw std::runtime_error("Failed to create component");
-            }
-
-            derma->SetRegistered(true);
-            mDermas.push_back(derma);
-
-            if (parent != nullptr) {
-                parent->AddChild(derma);
-            }
-
-            return derma;
-        }
-
-        std::shared_ptr<sf::Font> LoadFont_Instance(const std::string& path) {
-            return mResourceVault.LoadFont(path);
-        }
-
-        std::shared_ptr<sf::Texture> LoadTexture_Instance(
-            const std::string& path,
-            bool srgb_enabled = false,
-            const sf::IntRect& area = sf::IntRect()) {
-            return mResourceVault.LoadTexture(path, srgb_enabled, area);
-        }
-
-        void ShowDermaList_Instance() {
-            std::cout << "UI Dermas Listing\n";
-            std::cout << "=====================\n";
-
-            for (const auto& derma : mDermas) {
-                std::cout << "ID: " << derma->GetID() << "\t"
-                          << "Name: " << derma->GetName() << "\n";
-            }
-
-            std::cout << std::endl;
-        }
-
-        void Update_Instance(sf::RenderWindow& window) {
-            mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
-            mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
-            mControls.mMouse.mLPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-            mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
-            mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
-
-            for (auto& derma : mDermas) {
-                derma->Update(mControls);
-            }
-        }
-
-        void Render_Instance(sf::RenderWindow& window) {
-            for (auto& derma : mDermas) {
-                derma->Render(window);
-            }
+        template <typename T, typename... Args>
+        std::shared_ptr<T> MakeWidget(Args&&... args) {
+            auto pointer = std::make_shared<T>(mIDCounter++, std::forward<Args>(args)...);
+            pointer->Initialize();
+            return pointer;
         }
 
     public:
@@ -132,33 +39,35 @@ namespace Orbis {
 
         template <typename T>
         static T& Create() {
-            static_assert(std::is_base_of<DermaInterface, T>::value, "T must derive from DermaInterface");
+            auto pointer = GetUISystem().MakeWidget<T>();
 
-            auto pointer = GetUISystem().Create_Instance<T>(DTypeMap<T>::value, nullptr);
+            GetUISystem().mDermas.emplace_back(pointer);
 
             return *pointer;
         }
 
-        template <typename T, typename ParentType>
-        static T& CreateChild(ParentType& parent) {
-            static_assert(std::is_base_of<DermaInterface, T>::value, "T must derive from DermaInterface");
-            static_assert(std::is_base_of<DermaInterface, ParentType>::value, "Parent must derive from DermaInterface");
+        template <typename T, typename Parent>
+        static T& CreateChild(Parent& parent) {
+            auto pointer_parent = parent.template GetSharedFromThis<Parent>();
+            auto pointer = GetUISystem().MakeWidget<T>();
 
-            auto pointer_parent = parent.template GetSharedFromThis<ParentType>();
-            auto pointer = GetUISystem().Create_Instance<T>(DTypeMap<T>::value, pointer_parent);
+            pointer->SetParent(pointer_parent);
+            pointer_parent->AddChild(pointer);
 
-            return static_cast<T&>(*pointer);
+            GetUISystem().mDermas.emplace_back(pointer);
+
+            return *pointer;
         }
 
         static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
-            return GetUISystem().LoadFont_Instance(path);
+            return GetUISystem().mResourceVault.LoadFont(path);
         }
 
         static std::shared_ptr<sf::Texture> LoadTexture(
             const std::string& path,
             bool srgb_enabled = false,
             const sf::IntRect& area = sf::IntRect()) {
-            return GetUISystem().LoadTexture_Instance(path, srgb_enabled, area);
+            return GetUISystem().mResourceVault.LoadTexture(path, srgb_enabled, area);
         }
 
         static void ClearAllResources() {
@@ -166,15 +75,33 @@ namespace Orbis {
         }
 
         static void ShowDermaList() {
-            GetUISystem().ShowDermaList_Instance();
+            std::cout << "UI Dermas Listing\n";
+            std::cout << "=====================\n";
+
+            for (auto& derma : GetUISystem().mDermas) {
+                std::cout << "ID: " << derma->GetID() << "\t"
+                          << "Name: " << derma->GetName() << "\n";
+            }
+
+            std::cout << std::endl;
         }
 
         static void Update(sf::RenderWindow& window) {
-            GetUISystem().Update_Instance(window);
+            GetUISystem().mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
+            GetUISystem().mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
+            GetUISystem().mControls.mMouse.mLPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            GetUISystem().mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
+            GetUISystem().mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+
+            for (auto& derma : GetUISystem().mDermas) {
+                derma->Update(GetUISystem().mControls);
+            }
         }
 
         static void Render(sf::RenderWindow& window) {
-            GetUISystem().Render_Instance(window);
+            for (auto& derma : GetUISystem().mDermas) {
+                derma->Render(window);
+            }
         }
     };
 }

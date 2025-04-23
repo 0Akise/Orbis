@@ -2,9 +2,13 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Orbis/Derma/DermaEnums.hpp"
-
 namespace Orbis {
+    enum class DDrawingsType {
+        Rect,
+        Text,
+        Texture,
+    };
+
     class DermaDrawings {
     public:
         DDrawingsType mType;
