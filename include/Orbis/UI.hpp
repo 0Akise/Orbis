@@ -10,14 +10,19 @@
 #include "Orbis/Base/ResourceVault.hpp"
 #include "Orbis/Derma/Derma.hpp"
 #include "Orbis/Derma/DermaWidgets.hpp"
+#include "Orbis/UIEventDispatcher.hpp"
 
 namespace Orbis {
-    class UI {
+    class UI : public UIEventDispatcher {
     private:
         std::vector<std::shared_ptr<DermaBase>> mDermas;
         size_t mIDCounter;
         Controls mControls;
         ResourceVault mResourceVault;
+
+        std::weak_ptr<DermaBase> mSelectedDerma;
+        bool mZLevelsDirty = true;
+        size_t mNextZOrdering = 0;
 
         template <typename T, typename... Args>
         std::shared_ptr<T> MakeWidget(Args&&... args) {
@@ -29,7 +34,9 @@ namespace Orbis {
     public:
         UI()
             : mDermas(),
-              mIDCounter(0) {}
+              mIDCounter(0) {
+            UIEventDispatcher::SetInstance(this);
+        }
 
         static UI& GetUISystem() {
             static UI instance;
@@ -99,9 +106,57 @@ namespace Orbis {
         }
 
         static void Render(sf::RenderWindow& window) {
+            GetUISystem().RecalculateZLevels();
+
             for (auto& derma : GetUISystem().mDermas) {
                 derma->Render(window);
             }
+        }
+
+        void NotifyZLevelChanged() override {
+            mZLevelsDirty = true;
+        }
+
+        void NotifyDermaSelected(std::shared_ptr<DermaBase> derma) override {
+            auto previous = mSelectedDerma.lock();
+
+            if ((previous != nullptr) && (previous != derma)) {
+                mZLevelsDirty = true;
+            }
+
+            mSelectedDerma = derma;
+        }
+
+        void RecalculateZLevels() {
+            if (mZLevelsDirty == false)
+                return;
+
+            constexpr size_t selected_derma_z_boost = 1000;
+            constexpr size_t z_multiplier_base = 100;
+
+            mNextZOrdering = 0;
+
+            for (auto& derma : mDermas) {
+                size_t z_runtime = derma->GetZLevelBase() * z_multiplier_base;
+
+                if (auto parent = derma->GetParent(); parent != nullptr) {
+                    z_runtime += parent->GetZLevelRuntime() + 1;
+                }
+
+                if (auto selected = mSelectedDerma.lock(); selected != nullptr) {
+                    if (derma == selected || derma->IsChildOf(selected)) {
+                        z_runtime += selected_derma_z_boost;
+                    }
+                }
+
+                derma->SetZLevelRuntime(z_runtime);
+            }
+
+            std::stable_sort(mDermas.begin(), mDermas.end(), [](const auto& a, const auto& b) {
+                return a->GetZLevelRuntime() < b->GetZLevelRuntime();
+            });
+
+            mZLevelsDirty = false;
         }
     };
 }

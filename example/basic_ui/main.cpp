@@ -3,6 +3,7 @@
 
 using namespace Orbis;
 
+// Your actual game code here, this is just an example.
 struct Player {
     int mHealthMax = 100;
     int mHealthCurrent = 100;
@@ -20,18 +21,14 @@ struct AnimationState {
 };
 
 int main() {
+    sf::Vector2f screen_size({1080, 720});
+
     sf::RenderWindow window(sf::VideoMode({1080, 720}), "Orbis Examples 1: Basic HUD", sf::Style::Default);
 
     window.setFramerateLimit(120);
     window.setVerticalSyncEnabled(false);
 
-    sf::Vector2f screen_size({1080, 720});
-
     Player player;
-
-    auto& my_font = *UI::LoadFont("./res/roboto.ttf");
-    auto& hp_texture = *UI::LoadTexture("./res/hp.png");
-    auto& ap_texture = *UI::LoadTexture("./res/ap.png");
 
     AnimationState hp_anim;
     AnimationState ap_anim;
@@ -39,10 +36,20 @@ int main() {
     hp_anim.mCurrent = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
     ap_anim.mCurrent = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
 
+    // load your desired resources to UI so the UI class can access them.
+    // If loading fails(such as wrong path), Load* functions will throw exception.
+    auto& my_font = *UI::LoadFont("./res/roboto.ttf");
+    auto& hp_texture = *UI::LoadTexture("./res/hp.png");
+    auto& ap_texture = *UI::LoadTexture("./res/ap.png");
+
+    // Orbis uses Chaining to create UI Widgets.
+    // If you think the code might get too long, you can make separate file to store all UIs
+    // in the same way described here.
     auto& frame_example = UI::Create<DFrame>();
     frame_example.SetName("MyHUD")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
+        // !! Draw functions use local position of widget !!
         .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
         .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
         .DrawText(my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
@@ -63,6 +70,7 @@ int main() {
         .SetPosition({600, 200})
         .SetOptions(DOption::Default);
 
+    // for buttons to be usable, you can set Callbacks.
     auto& button_health_up = UI::CreateChild<DButton>(window_example1);
     button_health_up.SetName("ButtonHealthUp")
         .SetSize({50, 20})
@@ -111,9 +119,12 @@ int main() {
             ap_anim.mTo = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
         });
 
+    // for debugging purpose, you can list up dermas in console/terminal.
     UI::ShowDermaList();
 
     while (window.isOpen()) {
+        // be sure to update UI before while loop usually used in SFML examples.
+        // do NOT put it in event loop, Update itself has it's own loop for updating UI.
         UI::Update(window);
 
         while (const std::optional event = window.pollEvent()) {
@@ -147,6 +158,7 @@ int main() {
         sf::Vector2f window_size_current1 = window_example1.GetSize();
         sf::Vector2f window_size_current2 = window_example2.GetSize();
 
+        // Dynamic drawings are drawings that can be modified at the middle of the game loop.
         frame_example
             .DrawRectDynamic("frame_health", {310 * hp_anim.mCurrent, 28}, {60, 52}, 2, sf::Color({227, 47, 92, 255}))
             .DrawTextDynamic("frame_health_text", my_font, 13, {65, 55}, 20, sf::Color::White, std::to_string(player.mHealthCurrent))
@@ -181,6 +193,7 @@ int main() {
 
         window.clear();
 
+        // Be sure to call Render after cleaning up the window!
         UI::Render(window);
 
         window.display();

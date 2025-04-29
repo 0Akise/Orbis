@@ -54,6 +54,14 @@ namespace Orbis {
                         mIsSelected = event.mIsInBounds;
                     });
 
+                    mEventSystem.RegisterListener(DEventType::MouseDown, [this](const DEvent& event) {
+                        if (event.mIsInBounds) {
+                            mIsSelected = true;
+
+                            UIEventDispatcher::Get().NotifyDermaSelected(shared_from_this());
+                        }
+                    });
+
                     break;
 
                 case DOption::Movable:
@@ -244,11 +252,19 @@ namespace Orbis {
             if (mIsVisible == false)
                 return;
 
+            mIsUpdating = true;
+
             ProcessControls(controls);
 
-            for (auto& child : mChildren) {
+            auto children = mChildren;
+
+            for (auto& child : children) {
                 child->Update(controls);
             }
+
+            mIsUpdating = false;
+
+            ProcessPendingChildren();
         }
 
         void Render(sf::RenderWindow& window) override {

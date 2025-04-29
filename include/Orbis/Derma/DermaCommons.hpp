@@ -50,9 +50,17 @@ namespace Orbis {
         Resized,
 
         VisibilityChanged,
+    };
 
-        ParentChanged,
-        ChildAdded,
-        ChildRemoved
+    enum class DWindowState {
+        None,
+        Focused,
+        Selected,
+    };
+
+    enum class DButtonState {
+        Normal,
+        Hover,
+        Pressed,
     };
 }

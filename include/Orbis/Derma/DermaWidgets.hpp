@@ -8,12 +8,6 @@
 #include "Orbis/Derma/DermaCommons.hpp"
 
 namespace Orbis {
-    enum class DButtonState {
-        Normal,
-        Hover,
-        Pressed,
-    };
-
     class DFrame : public Derma<DFrame> {
     public:
         explicit DFrame(size_t id)
