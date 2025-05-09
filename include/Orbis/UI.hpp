@@ -144,7 +144,7 @@ namespace Orbis {
                 }
 
                 if (auto selected = mSelectedDerma.lock(); selected != nullptr) {
-                    if (derma == selected || derma->IsChildOf(selected)) {
+                    if (derma == selected || derma->IsChildOf(selected) || selected->IsChildOf(derma)) {
                         z_runtime += selected_derma_z_boost;
                     }
                 }

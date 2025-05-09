@@ -49,6 +49,8 @@ int main() {
     frame_example.SetName("MyHUD")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
+        // Be sure to set Z-Level for each Parental Widgets!
+        .SetZLevel(1)
         // !! Draw functions use local position of widget !!
         .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
         .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
@@ -62,18 +64,22 @@ int main() {
     window_example1.SetName("MyPanel1")
         .SetSize({300, 300})
         .SetPosition({200, 200})
+        .SetZLevel(10)
         .SetOptions(DOption::Movable);
 
     auto& window_example2 = UI::Create<DWindow>();
     window_example2.SetName("MyPanel2")
         .SetSize({300, 300})
         .SetPosition({600, 200})
+        .SetZLevel(10)
         .SetOptions(DOption::Default);
 
+    // notice that child of other widget uses CreateChild instead of Create function!
     // for buttons to be usable, you can set Callbacks.
     auto& button_health_up = UI::CreateChild<DButton>(window_example1);
     button_health_up.SetName("ButtonHealthUp")
         .SetSize({50, 20})
+        // Child widgets follow z-level of parent widgets, so no need to set z-level unless you want to.
         .SetPosition({10, 40})
         .SetCallback([&player, &hp_anim]() {
             player.mHealthCurrent = std::min(player.mHealthMax, player.mHealthCurrent + 10);

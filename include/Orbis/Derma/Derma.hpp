@@ -240,6 +240,8 @@ namespace Orbis {
 
         Derived& SetZLevel(size_t zlevel) {
             mZLevel = zlevel;
+            SetZLevelBase(zlevel);
+
             return self();
         }
 
@@ -304,6 +306,12 @@ namespace Orbis {
                 DEvent event_mouse_down = event_base;
 
                 event_mouse_down.mType = DEventType::MouseLDown;
+
+                if (mIsInBounds == true) {
+                    mIsSelected = true;
+                    UIEventDispatcher::Get().NotifyDermaSelected(shared_from_this());
+                }
+
                 mEventSystem.EmitEvent(event_mouse_down);
             } else if ((event_base.mControls.mMouse.mLPress == false) && (mControlsPrevious.mMouse.mLPress == true)) {
                 DEvent event_mouse_up = event_base;

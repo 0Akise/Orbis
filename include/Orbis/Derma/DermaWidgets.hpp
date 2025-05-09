@@ -31,7 +31,7 @@ namespace Orbis {
               mIsMoving(false) {}
 
         void Initialize() {
-            this->SetOptions(DOption::Movable);
+            this->SetOptions(DOption::Selectable);
         }
 
         bool IsInTitlebar(const sf::Vector2f& position) const {

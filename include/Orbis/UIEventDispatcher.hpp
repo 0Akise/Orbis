@@ -5,31 +5,24 @@ namespace Orbis {
     class DermaBase;
 
     class UIEventDispatcher {
+    private:
+        inline static UIEventDispatcher* mInstance = nullptr;
+
     public:
         virtual ~UIEventDispatcher() = default;
         virtual void NotifyZLevelChanged() = 0;
         virtual void NotifyDermaSelected(std::shared_ptr<DermaBase> derma) = 0;
 
         static UIEventDispatcher& Get() {
-            static UIEventDispatcher* instance = nullptr;
-
-            if (instance == nullptr) {
+            if (mInstance == nullptr) {
                 throw std::runtime_error("UIEventDispatcher not initialized");
             }
 
-            return *instance;
+            return *mInstance;
         }
 
         static void SetInstance(UIEventDispatcher* instance) {
-            static UIEventDispatcher** instancePtr = []() {
-                static UIEventDispatcher* ptr = nullptr;
-
-                return &ptr;
-            }();
-
-            if (instance != nullptr) {
-                *instancePtr = instance;
-            }
+            mInstance = instance;
         }
     };
 }
