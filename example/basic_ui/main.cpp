@@ -23,7 +23,8 @@ struct AnimationState {
 int main() {
     sf::Vector2f screen_size({1080, 720});
 
-    sf::RenderWindow window(sf::VideoMode({1080, 720}), "Orbis Examples 1: Basic HUD", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Orbis Examples 1: Basic HUD", sf::Style::Default);
+    UIContext context;
 
     window.setFramerateLimit(120);
     window.setVerticalSyncEnabled(false);
@@ -36,47 +37,55 @@ int main() {
     hp_anim.mCurrent = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
     ap_anim.mCurrent = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
 
+    // Declare your UI class instance.
+    UI::Initialize();
+    UI::Bind(window, context);
     // load your desired resources to UI so the UI class can access them.
     // If loading fails(such as wrong path), Load* functions will throw exception.
-    auto& my_font = *UI::LoadFont("./res/roboto.ttf");
-    auto& hp_texture = *UI::LoadTexture("./res/hp.png");
-    auto& ap_texture = *UI::LoadTexture("./res/ap.png");
+    auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
+    auto hp_texture = UI::LoadTexture(context, "./res/hp.png");
+    auto ap_texture = UI::LoadTexture(context, "./res/ap.png");
 
-    // Orbis uses Chaining to create UI Widgets.
+    // Orbis uses Chaining to create UI Dermas and Widgets.
     // If you think the code might get too long, you can make separate file to store all UIs
     // in the same way described here.
-    auto& frame_example = UI::Create<DFrame>();
-    frame_example.SetName("MyHUD")
+    auto example_button = UI::CreateWidget(WidgetType::Button);
+    example_button.SetSize(100, 50);
+
+    auto example_frame = UI::CreateDerma(context);
+    example_frame.SetName("MyFrame")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
-        // Be sure to set Z-Level for each Parental Widgets!
+        // Be sure to set Z-Level for each Derma!
         .SetZLevel(1)
-        // !! Draw functions use local position of widget !!
+        // !! Widgets and Drawings use local position of Derma !!
         .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
         .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
-        .DrawText(my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
-        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, hp_texture)
-        .DrawTexture({32, 32}, {15, 90}, 10, sf::Color::White, ap_texture)
+        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
+        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *hp_texture)
+        .DrawTexture({32, 32}, {15, 90}, 10, sf::Color::White, *ap_texture)
         .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
-        .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}));
+        .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}))
+        .AddWidget(example_button, {100, 100});
 
-    auto& window_example1 = UI::Create<DWindow>();
+    /*
+    auto& window_example1 = UI::CreateDerma<Window>();
     window_example1.SetName("MyPanel1")
         .SetSize({300, 300})
         .SetPosition({200, 200})
         .SetZLevel(10)
-        .SetOptions(DOption::Movable);
+        .SetOptions(DermaOption::Movable);
 
-    auto& window_example2 = UI::Create<DWindow>();
+    auto& window_example2 = UI::CreateDerma<Window>();
     window_example2.SetName("MyPanel2")
         .SetSize({300, 300})
         .SetPosition({600, 200})
         .SetZLevel(10)
-        .SetOptions(DOption::Default);
+        .SetOptions(DermaOption::Default);
 
     // notice that child of other widget uses CreateChild instead of Create function!
     // for buttons to be usable, you can set Callbacks.
-    auto& button_health_up = UI::CreateChild<DButton>(window_example1);
+    auto& button_health_up = UI::CreateChild<Button>(window_example1);
     button_health_up.SetName("ButtonHealthUp")
         .SetSize({50, 20})
         // Child widgets follow z-level of parent widgets, so no need to set z-level unless you want to.
@@ -89,7 +98,7 @@ int main() {
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
-    auto& button_health_down = UI::CreateChild<DButton>(window_example1);
+    auto& button_health_down = UI::CreateChild<Button>(window_example1);
     button_health_down.SetName("ButtonHealthDown")
         .SetSize({50, 20})
         .SetPosition({10, 80})
@@ -101,7 +110,7 @@ int main() {
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
-    auto& button_armor_up = UI::CreateChild<DButton>(window_example1);
+    auto& button_armor_up = UI::CreateChild<Button>(window_example1);
     button_armor_up.SetName("ButtonHealthUp")
         .SetSize({50, 20})
         .SetPosition({70, 40})
@@ -113,7 +122,7 @@ int main() {
             ap_anim.mTo = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
         });
 
-    auto& button_armor_down = UI::CreateChild<DButton>(window_example1);
+    auto& button_armor_down = UI::CreateChild<Button>(window_example1);
     button_armor_down.SetName("ButtonHealthDown")
         .SetSize({50, 20})
         .SetPosition({70, 80})
@@ -124,9 +133,10 @@ int main() {
             ap_anim.mFrom = ap_anim.mCurrent;
             ap_anim.mTo = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
         });
+    */
 
     // for debugging purpose, you can list up dermas in console/terminal.
-    UI::ShowDermaList();
+    UI::ShowDermaList(context);
 
     while (window.isOpen()) {
         // be sure to update UI before while loop usually used in SFML examples.
@@ -161,6 +171,7 @@ int main() {
             }
         }
 
+        /*
         sf::Vector2f window_size_current1 = window_example1.GetSize();
         sf::Vector2f window_size_current2 = window_example2.GetSize();
 
@@ -196,7 +207,7 @@ int main() {
         button_armor_down
             .DrawRectDynamic("button_armor_down", {50, 20}, {0, 0}, 10, sf::Color(180, 180, 180))
             .DrawTextDynamic("button_health_up_text", my_font, 13, {5, 3}, 20, sf::Color::White, "Down");
-
+        */
         window.clear();
 
         // Be sure to call Render after cleaning up the window!

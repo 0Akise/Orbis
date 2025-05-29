@@ -3,24 +3,24 @@
 #include <SFML/Graphics.hpp>
 
 namespace Orbis {
-    enum class DDrawingsType {
+    enum class DrawingType {
         Rect,
         Text,
         Texture,
     };
 
-    class DermaDrawings {
+    class Drawing {
     public:
-        DDrawingsType mType;
+        DrawingType mType;
         std::string mID;
         sf::Vector2f mPosition;
         size_t mZLevel;
         sf::Color mFillColor;
 
-        virtual ~DermaDrawings() = default;
+        virtual ~Drawing() = default;
     };
 
-    class DrawingsRect : public DermaDrawings {
+    class DrawingRect : public Drawing {
     public:
         sf::Vector2f mSize;
 
@@ -32,14 +32,14 @@ namespace Orbis {
         float mRoundingRadius;
     };
 
-    class DrawingsText : public DermaDrawings {
+    class DrawingText : public Drawing {
     public:
         sf::Font mFont;
         size_t mFontSize;
         std::string mText;
     };
 
-    class DrawingsTexture : public DermaDrawings {
+    class DrawingTexture : public Drawing {
     public:
         sf::Vector2f mSize;
 

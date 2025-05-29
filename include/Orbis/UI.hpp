@@ -1,91 +1,67 @@
 #pragma once
 
-#include <algorithm>
-#include <iostream>
 #include <memory>
-#include <typeinfo>
+#include <unordered_map>
 #include <vector>
 
-#include "Orbis/Base/Controls.hpp"
-#include "Orbis/Base/ResourceVault.hpp"
-#include "Orbis/Derma/Derma.hpp"
-#include "Orbis/Derma/DermaWidgets.hpp"
-#include "Orbis/UIEventDispatcher.hpp"
+#include "Orbis/Base/Derma.hpp"
+#include "Orbis/Base/Widget.hpp"
+#include "Orbis/Base/WidgetBase.hpp"
+#include "Orbis/System/Controls.hpp"
+#include "Orbis/System/ResourceVault.hpp"
 
 namespace Orbis {
-    class UI : public UIEventDispatcher {
+    class UIContext {
     private:
-        std::vector<std::shared_ptr<DermaBase>> mDermas;
-        size_t mIDCounter;
         Controls mControls;
         ResourceVault mResourceVault;
 
-        std::weak_ptr<DermaBase> mSelectedDerma;
-        bool mZLevelsDirty = true;
-        size_t mNextZOrdering = 0;
+        std::vector<std::shared_ptr<Derma>> mDermas;
+        size_t mDermaIDs = 0;
 
-        template <typename T, typename... Args>
-        std::shared_ptr<T> MakeWidget(Args&&... args) {
-            auto pointer = std::make_shared<T>(mIDCounter++, std::forward<Args>(args)...);
-            pointer->Initialize();
-            return pointer;
-        }
+        std::weak_ptr<Derma> mSelectedDerma;
+        bool mZLevelIsDirty = false;
 
     public:
-        UI()
-            : mDermas(),
-              mIDCounter(0) {
-            UIEventDispatcher::SetInstance(this);
+        ResourceVault& AccessResourceVault() {
+            return mResourceVault;
         }
 
-        static UI& GetUISystem() {
-            static UI instance;
-
-            return instance;
+        size_t GetDermaID() {
+            return mDermaIDs;
         }
 
-        template <typename T>
-        static T& Create() {
-            auto pointer = GetUISystem().MakeWidget<T>();
-
-            GetUISystem().mDermas.emplace_back(pointer);
-
-            return *pointer;
+        void SetDermaID() {
+            mDermaIDs++;
         }
 
-        template <typename T, typename Parent>
-        static T& CreateChild(Parent& parent) {
-            auto pointer_parent = parent.template GetSharedFromThis<Parent>();
-            auto pointer = GetUISystem().MakeWidget<T>();
-
-            pointer->SetParent(pointer_parent);
-            pointer_parent->AddChild(pointer);
-
-            GetUISystem().mDermas.emplace_back(pointer);
-
-            return *pointer;
+        void NotifyZLevelChanged() {
+            mZLevelIsDirty = true;
         }
 
-        static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
-            return GetUISystem().mResourceVault.LoadFont(path);
+        void NotifyDermaSelected(std::shared_ptr<Derma> derma) {
+            auto previous = mSelectedDerma.lock();
+
+            if ((previous != nullptr) && (previous != derma)) {
+                mZLevelIsDirty = true;
+            }
+
+            mSelectedDerma = derma;
         }
 
-        static std::shared_ptr<sf::Texture> LoadTexture(
-            const std::string& path,
-            bool srgb_enabled = false,
-            const sf::IntRect& area = sf::IntRect()) {
-            return GetUISystem().mResourceVault.LoadTexture(path, srgb_enabled, area);
+        void RecalculateZLevels() {
+            if (mZLevelIsDirty == false) {
+                return;
+            }
+
+            mZLevelIsDirty = false;
         }
 
-        static void ClearAllResources() {
-            GetUISystem().mResourceVault.ClearAllResources();
-        }
-
-        static void ShowDermaList() {
+        void ShowDermaList() {
             std::cout << "UI Dermas Listing\n";
             std::cout << "=====================\n";
 
-            for (auto& derma : GetUISystem().mDermas) {
+            for (auto& derma : mDermas) {
                 std::cout << "ID: " << derma->GetID() << "\t"
                           << "Name: " << derma->GetName() << "\n";
             }
@@ -93,70 +69,115 @@ namespace Orbis {
             std::cout << std::endl;
         }
 
-        static void Update(sf::RenderWindow& window) {
-            GetUISystem().mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
-            GetUISystem().mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
-            GetUISystem().mControls.mMouse.mLPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-            GetUISystem().mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
-            GetUISystem().mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+        void Update(sf::RenderWindow& window) {
+            mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
+            mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
+            mControls.mMouse.mLPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
+            mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
 
-            for (auto& derma : GetUISystem().mDermas) {
-                derma->Update(GetUISystem().mControls);
+            for (auto& derma : mDermas) {
+                derma->Update(mControls);
             }
         }
 
-        static void Render(sf::RenderWindow& window) {
-            GetUISystem().RecalculateZLevels();
+        void Render(sf::RenderWindow& window) {
+            if (mZLevelIsDirty == true) {
+                RecalculateZLevels();
+            }
 
-            for (auto& derma : GetUISystem().mDermas) {
+            for (auto& derma : mDermas) {
                 derma->Render(window);
             }
         }
+    };
 
-        void NotifyZLevelChanged() override {
-            mZLevelsDirty = true;
+    class UIManager {
+    private:
+        UIManager() = default;
+        std::unordered_map<sf::RenderWindow*, UIContext*> mContexts;
+
+    public:
+        static UIManager& Get() {
+            static UIManager instance;
+
+            return instance;
         }
 
-        void NotifyDermaSelected(std::shared_ptr<DermaBase> derma) override {
-            auto previous = mSelectedDerma.lock();
-
-            if ((previous != nullptr) && (previous != derma)) {
-                mZLevelsDirty = true;
-            }
-
-            mSelectedDerma = derma;
+        static void Initialize() {
+            Get();
         }
 
-        void RecalculateZLevels() {
-            if (mZLevelsDirty == false)
-                return;
+        void Bind(sf::RenderWindow& window, UIContext& context) {
+            mContexts[&window] = &context;
+        }
 
-            constexpr size_t selected_derma_z_boost = 1000;
-            constexpr size_t z_multiplier_base = 100;
+        UIContext* GetContext(sf::RenderWindow& window) {
+            auto iter = mContexts.find(&window);
 
-            mNextZOrdering = 0;
+            return iter != mContexts.end() ? iter->second : nullptr;
+        }
+    };
 
-            for (auto& derma : mDermas) {
-                size_t z_runtime = derma->GetZLevelBase() * z_multiplier_base;
+    class UI {
+    public:
+        static inline std::vector<std::shared_ptr<WidgetInterface>> mWidgetStorage;
 
-                if (auto parent = derma->GetParent(); parent != nullptr) {
-                    z_runtime += parent->GetZLevelRuntime() + 1;
-                }
+        static inline void Initialize() {
+            UIManager::Initialize();
+        }
 
-                if (auto selected = mSelectedDerma.lock(); selected != nullptr) {
-                    if (derma == selected || derma->IsChildOf(selected) || selected->IsChildOf(derma)) {
-                        z_runtime += selected_derma_z_boost;
-                    }
-                }
+        static inline void Bind(sf::RenderWindow& window, UIContext& context) {
+            UIManager::Get().Bind(window, context);
+        }
 
-                derma->SetZLevelRuntime(z_runtime);
+        static Derma& CreateDerma(UIContext& context) {
+            auto derma = std::make_shared<Derma>();
+            derma->SetID(context.GetDermaID());
+            context.SetDermaID();
+
+            return *derma;
+        }
+
+        template <WidgetType Type>
+        static auto& CreateWidget() {
+            if constexpr (Type == WidgetType::Button) {
+                auto widget = std::make_shared<Button>();
+
+                mWidgetStorage.push_back(widget);
+
+                return *widget;
+            } else {
+                static_assert(Type == WidgetType::Button, "Unsupported Widget Type");
             }
+        }
 
-            std::stable_sort(mDermas.begin(), mDermas.end(), [](const auto& a, const auto& b) {
-                return a->GetZLevelRuntime() < b->GetZLevelRuntime();
-            });
+        static inline std::shared_ptr<sf::Font> LoadFont(UIContext& context, const std::string& path) {
+            return context.AccessResourceVault().LoadFont(path);
+        }
 
-            mZLevelsDirty = false;
+        static inline std::shared_ptr<sf::Texture> LoadTexture(
+            UIContext& context,
+            const std::string& path,
+            bool srgb_enabled = false,
+            const sf::IntRect& area = sf::IntRect()) {
+            return context.AccessResourceVault().LoadTexture(path, srgb_enabled, area);
+        }
+
+        static inline void clearAllResources(UIContext& context) {
+            context.AccessResourceVault().ClearAllResources();
+        }
+
+        static inline void ShowDermaList(UIContext& context) {
+            context.ShowDermaList();
+        }
+
+        static inline void Update(sf::RenderWindow& window) {
+            UIManager::Get().GetContext(window)->Update(window);
+        }
+
+        static inline void Render(sf::RenderWindow& window) {
+            UIManager::Get().GetContext(window)->Render(window);
         }
     };
 }
