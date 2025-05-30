@@ -34,17 +34,34 @@ If possible, use LLVM-MinGW with UCRT which you can download from [Here](https:/
 # Usage
 Check out `example` folder for further information.
 ```cpp
-// Creates Frame you can draw and customize, such as HUD for your game.
-auto& frame = *UI::Create(DType::DFrame);
-frame.SetName("Main Frame")
-    .SetSize({400.0f, 200.0f})
-    .SetPosition({10.0f, 10.0f})
-    .DrawRect({380.0f, 180.0f}, {10.0f, 10.0f}, 0, sf::Color::White);
+// declare UIContext
+sf::RenderWindow window(sf::VideoMode(...), "...", sf::Style::Default);
+UIContext context;
 
-UI::ShowDermaList();
-// in main game loop
-UI::Update(window);
-UI::Render(window);
+// Initialize Global UI instance and bind window and it's context
+UI::Initialize();
+UI::Bind(window, context);
+
+// Load resources to appropriate context which will be automatically loaded to SFML window
+auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
+
+// Declare reusable widgets. Widgets are NOT dependant on context, you can re-use it freely
+auto example_button = UI::CreateWidget(WidgetType::Button);
+example_button.SetSize(100, 50);
+
+// Declare Derma, which contains both widget and drawings. see AddWidget function at the last?
+auto example_window = UI::CreateDerma(context);
+example_window.SetName("MyWindow")
+        .SetSize({400, 200})
+        .SetPosition({0, screen_size.y - 200})
+        // Be sure to set Z-Level for each Derma!
+        .SetZLevel(1)
+        // !! Widgets and Drawings use local position of Derma !!
+        .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
+        .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
+        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
+        ...
+        .AddWidget(example_button, {100, 100});
 ```
 - UI Class uses static/singleton pattern, which gives you direct control of how the UI should work.
 - by chaining commands with dots, you can control your Derma components with high customizability.

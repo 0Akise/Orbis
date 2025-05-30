@@ -51,16 +51,10 @@ namespace Orbis {
         bool mIsVisible = true;
 
     public:
-        Derma& AddWidget(
-            const std::shared_ptr<WidgetInterface>& widget,
-            const sf::Vector2f& position,
-            size_t z_level = 0) {
-            if (auto* widget_base = dynamic_cast<WidgetBase<Button>*>(widget.get())) {
-                widget_base->SetPosition(position);
-                widget_base->SetZLevel(z_level);
-            }
+        Derma& AddWidget(const auto& widget_handle, const sf::Vector2f& position, size_t z_level = 0) {
+            auto widget_ptr = widget_handle.GetWidgetShared();
 
-            mWidgets.emplace(z_level, widget);
+            mWidgets.emplace(z_level, widget_ptr);
 
             return *this;
         }

@@ -49,8 +49,8 @@ int main() {
     // Orbis uses Chaining to create UI Dermas and Widgets.
     // If you think the code might get too long, you can make separate file to store all UIs
     // in the same way described here.
-    auto example_button = UI::CreateWidget(WidgetType::Button);
-    example_button.SetSize(100, 50);
+    auto example_button = UI::CreateWidget<WidgetType::Button>();
+    example_button.SetSize({100, 50});
 
     auto example_frame = UI::CreateDerma(context);
     example_frame.SetName("MyFrame")

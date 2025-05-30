@@ -18,6 +18,7 @@ namespace Orbis {
 
         std::vector<std::shared_ptr<Derma>> mDermas;
         size_t mDermaIDs = 0;
+        std::vector<std::shared_ptr<WidgetInterface>> mWidgets;
 
         std::weak_ptr<Derma> mSelectedDerma;
         bool mZLevelIsDirty = false;
@@ -25,6 +26,26 @@ namespace Orbis {
     public:
         ResourceVault& AccessResourceVault() {
             return mResourceVault;
+        }
+
+        void AddDerma(std::shared_ptr<Derma> derma) {
+            mDermas.push_back(derma);
+        }
+
+        template <typename T>
+        void RegisterWidget(std::shared_ptr<T> widget) {
+            mWidgets.push_back(std::static_pointer_cast<WidgetInterface>(widget));
+        }
+
+        template <WidgetType Type>
+        auto CreateWidget() {
+            if constexpr (Type == WidgetType::Button) {
+                auto widget = std::make_shared<Button>();
+
+                RegisterWidget(widget);
+
+                return WidgetHandle<Button>(widget, this);
+            }
         }
 
         size_t GetDermaID() {
@@ -92,6 +113,61 @@ namespace Orbis {
         }
     };
 
+    template <typename T>
+    class WidgetHandle {
+    private:
+        std::shared_ptr<T> mWidget;
+
+    public:
+        WidgetHandle(std::shared_ptr<T> widget) : mWidget(widget) {}
+
+        T* operator->() {
+            return mWidget.get();
+        }
+
+        T& operator*() {
+            return *mWidget;
+        }
+
+        T& GetWidget() {
+            return *mWidget;
+        }
+
+        std::shared_ptr<WidgetInterface> GetWidgetShared() const {
+            return std::static_pointer_cast<WidgetInterface>(mWidget);
+        }
+
+        WidgetHandle& SetSize(sf::Vector2f size) {
+            mWidget->SetSize(size);
+
+            return *this;
+        }
+
+        WidgetHandle& SetZLevel(size_t zlevel) {
+            mWidget->SetZLevel(zlevel);
+
+            return *this;
+        }
+
+        WidgetHandle& SetVisible(bool is_visible) {
+            mWidget->SetVisible(is_visible);
+
+            return *this;
+        }
+
+        auto SetText(const std::string& text) -> decltype(mWidget->SetText(text), *this) {
+            mWidget->SetText(text);
+
+            return *this;
+        }
+
+        auto SetCallback(std::function<void()> callback) -> decltype(mWidget->SetCallback(callback), *this) {
+            mWidget->SetCallback(callback);
+
+            return *this;
+        }
+    };
+
     class UIManager {
     private:
         UIManager() = default;
@@ -121,8 +197,6 @@ namespace Orbis {
 
     class UI {
     public:
-        static inline std::vector<std::shared_ptr<WidgetInterface>> mWidgetStorage;
-
         static inline void Initialize() {
             UIManager::Initialize();
         }
@@ -133,22 +207,20 @@ namespace Orbis {
 
         static Derma& CreateDerma(UIContext& context) {
             auto derma = std::make_shared<Derma>();
+
             derma->SetID(context.GetDermaID());
             context.SetDermaID();
+            context.AddDerma(derma);
 
             return *derma;
         }
 
         template <WidgetType Type>
-        static auto& CreateWidget() {
+        static auto CreateWidget() {
             if constexpr (Type == WidgetType::Button) {
                 auto widget = std::make_shared<Button>();
 
-                mWidgetStorage.push_back(widget);
-
-                return *widget;
-            } else {
-                static_assert(Type == WidgetType::Button, "Unsupported Widget Type");
+                return WidgetHandle<Button>(widget);
             }
         }
 
