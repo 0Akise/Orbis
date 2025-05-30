@@ -4,6 +4,14 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Orbis {
+    template <typename T>
+    class WidgetHandle;
+    class Button;
+    class Derma;
+    class WidgetInterface;
+}
+
 #include "Orbis/Base/Derma.hpp"
 #include "Orbis/Base/Widget.hpp"
 #include "Orbis/Base/WidgetBase.hpp"
@@ -11,14 +19,69 @@
 #include "Orbis/System/ResourceVault.hpp"
 
 namespace Orbis {
+    template <typename T>
+    class WidgetHandle {
+    private:
+        std::shared_ptr<T> mWidget;
+
+    public:
+        WidgetHandle(std::shared_ptr<T> widget) : mWidget(widget) {}
+
+        T* operator->() {
+            return mWidget.get();
+        }
+
+        T& operator*() {
+            return *mWidget;
+        }
+
+        T& GetWidget() {
+            return *mWidget;
+        }
+
+        std::shared_ptr<WidgetInterface> GetWidgetShared() const {
+            return std::static_pointer_cast<WidgetInterface>(mWidget);
+        }
+
+        WidgetHandle& SetSize(sf::Vector2f size) {
+            mWidget->SetSize(size);
+
+            return *this;
+        }
+
+        WidgetHandle& SetZLevel(size_t zlevel) {
+            mWidget->SetZLevel(zlevel);
+
+            return *this;
+        }
+
+        WidgetHandle& SetVisible(bool is_visible) {
+            mWidget->SetVisible(is_visible);
+
+            return *this;
+        }
+
+        auto SetText(const std::string& text) -> decltype(mWidget->SetText(text), *this) {
+            mWidget->SetText(text);
+
+            return *this;
+        }
+
+        auto SetCallback(std::function<void()> callback) -> decltype(mWidget->SetCallback(callback), *this) {
+            mWidget->SetCallback(callback);
+
+            return *this;
+        }
+    };
+
     class UIContext {
     private:
         Controls mControls;
         ResourceVault mResourceVault;
 
         std::vector<std::shared_ptr<Derma>> mDermas;
-        size_t mDermaIDs = 0;
         std::vector<std::shared_ptr<WidgetInterface>> mWidgets;
+        size_t mDermaIDs = 0;
 
         std::weak_ptr<Derma> mSelectedDerma;
         bool mZLevelIsDirty = false;
@@ -44,7 +107,7 @@ namespace Orbis {
 
                 RegisterWidget(widget);
 
-                return WidgetHandle<Button>(widget, this);
+                return WidgetHandle<Button>(widget);
             }
         }
 
@@ -110,61 +173,6 @@ namespace Orbis {
             for (auto& derma : mDermas) {
                 derma->Render(window);
             }
-        }
-    };
-
-    template <typename T>
-    class WidgetHandle {
-    private:
-        std::shared_ptr<T> mWidget;
-
-    public:
-        WidgetHandle(std::shared_ptr<T> widget) : mWidget(widget) {}
-
-        T* operator->() {
-            return mWidget.get();
-        }
-
-        T& operator*() {
-            return *mWidget;
-        }
-
-        T& GetWidget() {
-            return *mWidget;
-        }
-
-        std::shared_ptr<WidgetInterface> GetWidgetShared() const {
-            return std::static_pointer_cast<WidgetInterface>(mWidget);
-        }
-
-        WidgetHandle& SetSize(sf::Vector2f size) {
-            mWidget->SetSize(size);
-
-            return *this;
-        }
-
-        WidgetHandle& SetZLevel(size_t zlevel) {
-            mWidget->SetZLevel(zlevel);
-
-            return *this;
-        }
-
-        WidgetHandle& SetVisible(bool is_visible) {
-            mWidget->SetVisible(is_visible);
-
-            return *this;
-        }
-
-        auto SetText(const std::string& text) -> decltype(mWidget->SetText(text), *this) {
-            mWidget->SetText(text);
-
-            return *this;
-        }
-
-        auto SetCallback(std::function<void()> callback) -> decltype(mWidget->SetCallback(callback), *this) {
-            mWidget->SetCallback(callback);
-
-            return *this;
         }
     };
 

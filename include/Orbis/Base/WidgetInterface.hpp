@@ -13,7 +13,6 @@ namespace Orbis {
     public:
         virtual ~WidgetInterface() = default;
 
-        virtual void SetSize(sf::Vector2f size) = 0;
         virtual void Update(const Controls& controls) = 0;
         virtual void Render(sf::RenderWindow& window) = 0;
     };

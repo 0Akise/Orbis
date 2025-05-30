@@ -62,7 +62,7 @@ namespace Orbis {
             return mIsVisible;
         }
 
-        Derived& SetSize(sf::Vector2f size) override {
+        Derived& SetSize(sf::Vector2f size) {
             mSize = size;
 
             return self();

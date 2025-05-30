@@ -54,6 +54,8 @@ namespace Orbis {
         Derma& AddWidget(const auto& widget_handle, const sf::Vector2f& position, size_t z_level = 0) {
             auto widget_ptr = widget_handle.GetWidgetShared();
 
+            widget_ptr->SetPosition(position);
+
             mWidgets.emplace(z_level, widget_ptr);
 
             return *this;
