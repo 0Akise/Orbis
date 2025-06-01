@@ -54,11 +54,17 @@ namespace Orbis {
         Derma& AddWidget(const auto& widget_handle, const sf::Vector2f& position, size_t z_level = 0) {
             auto widget_ptr = widget_handle.GetWidgetShared();
 
-            widget_ptr->SetPosition(position);
+            widget_ptr->SetPositionOffset(position);
 
             mWidgets.emplace(z_level, widget_ptr);
 
             return *this;
+        }
+
+        Derma& MoveWidget(const auto& widget_handle, const sf::Vector2f& position) {
+            auto widget_ptr = widget_handle.GetWidgetShared();
+
+            widget_ptr->SetPositionOffset(position);
         }
 
         void InitializeOptions() {
@@ -294,185 +300,6 @@ namespace Orbis {
 
             mControlsPrevious.mMouse.mLPress = event_base.mControls.mMouse.mLPress;
             mControlsPrevious.mMouse.mRPress = event_base.mControls.mMouse.mRPress;
-        }
-
-        Derma& DrawRect(
-            sf::Vector2f size,
-            sf::Vector2f position,
-            size_t zlevel,
-            sf::Color fill_color,
-            bool is_outlined = false,
-            float outline_thickness = 0.0f,
-            sf::Color outline_color = sf::Color::Black,
-            bool is_rounded = false,
-            float rounding_radius = 0.0f) {
-            auto drawing = std::make_shared<DrawingRect>();
-
-            drawing->mType = DrawingType::Rect;
-            drawing->mID = "";
-            drawing->mSize = size;
-            drawing->mPosition = position;
-            drawing->mZLevel = zlevel;
-            drawing->mFillColor = fill_color;
-            drawing->mIsOutlined = is_outlined;
-            drawing->mOutlineThickness = outline_thickness;
-            drawing->mOutlineColor = outline_color;
-            drawing->mIsRounded = is_rounded;
-            drawing->mRoundingRadius = rounding_radius;
-            mDrawings.emplace(zlevel, drawing);
-
-            return *this;
-        }
-
-        Derma& DrawRectDynamic(
-            const std::string& id,
-            sf::Vector2f size,
-            sf::Vector2f position,
-            size_t zlevel,
-            sf::Color fill_color,
-            bool is_outlined = false,
-            float outline_thickness = 0.0f,
-            sf::Color outline_color = sf::Color::Black,
-            bool is_rounded = false,
-            float rounding_radius = 0.0f) {
-            ClearDrawing(id);
-
-            auto drawing = std::make_shared<DrawingRect>();
-
-            drawing->mType = DrawingType::Rect;
-            drawing->mID = std::move(id);
-            drawing->mSize = size;
-            drawing->mPosition = position;
-            drawing->mZLevel = zlevel;
-            drawing->mFillColor = fill_color;
-            drawing->mIsOutlined = is_outlined;
-            drawing->mOutlineThickness = outline_thickness;
-            drawing->mOutlineColor = outline_color;
-            drawing->mIsRounded = is_rounded;
-            drawing->mRoundingRadius = rounding_radius;
-            mDrawings.emplace(zlevel, drawing);
-
-            return *this;
-        }
-
-        Derma& DrawText(
-            sf::Font font,
-            size_t font_size,
-            sf::Vector2f position,
-            size_t zlevel,
-            sf::Color fill_color,
-            const std::string& text = "") {
-            auto drawing = std::make_shared<DrawingText>();
-
-            drawing->mType = DrawingType::Text;
-            drawing->mID = "";
-            drawing->mFont = font;
-            drawing->mPosition = position;
-            drawing->mZLevel = zlevel;
-            drawing->mFillColor = fill_color;
-            drawing->mFontSize = font_size;
-            drawing->mText = std::move(text);
-            mDrawings.emplace(zlevel, drawing);
-
-            return *this;
-        }
-
-        Derma& DrawTextDynamic(
-            const std::string& id,
-            sf::Font font,
-            size_t font_size,
-            sf::Vector2f position,
-            size_t zlevel,
-            sf::Color fill_color,
-            const std::string& text = "") {
-            ClearDrawing(id);
-
-            auto drawing = std::make_shared<DrawingText>();
-
-            drawing->mType = DrawingType::Text;
-            drawing->mID = std::move(id);
-            drawing->mFont = font;
-            drawing->mPosition = position;
-            drawing->mZLevel = zlevel;
-            drawing->mFillColor = fill_color;
-            drawing->mFontSize = font_size;
-            drawing->mText = std::move(text);
-            mDrawings.emplace(zlevel, drawing);
-
-            return *this;
-        }
-
-        Derma& DrawTexture(
-            sf::Vector2f size,
-            sf::Vector2f position,
-            size_t zlevel,
-            sf::Color fill_color,
-            sf::Texture texture,
-            bool smoothing_enabled = true) {
-            auto drawing = std::make_shared<DrawingTexture>();
-
-            drawing->mType = DrawingType::Texture;
-            drawing->mID = "";
-            drawing->mSize = size;
-            drawing->mPosition = position;
-            drawing->mZLevel = zlevel;
-            drawing->mFillColor = fill_color;
-            drawing->mTexture = texture;
-            drawing->mTextureSmoothing = smoothing_enabled;
-            mDrawings.emplace(zlevel, drawing);
-
-            return *this;
-        }
-
-        Derma& DrawTextureDynamic(
-            const std::string& id,
-            sf::Vector2f size,
-            sf::Vector2f position,
-            size_t zlevel,
-            sf::Color fill_color,
-            sf::Texture texture,
-            bool smoothing_enabled = true) {
-            ClearDrawing(id);
-
-            auto drawing = std::make_shared<DrawingTexture>();
-
-            drawing->mType = DrawingType::Texture;
-            drawing->mID = std::move(id);
-            drawing->mSize = size;
-            drawing->mPosition = position;
-            drawing->mZLevel = zlevel;
-            drawing->mFillColor = fill_color;
-            drawing->mTexture = texture;
-            drawing->mTextureSmoothing = smoothing_enabled;
-            mDrawings.emplace(zlevel, drawing);
-
-            return *this;
-        }
-
-        Derma& ClearDrawing(const std::string& id) {
-            if (id.empty() == true) {
-                return *this;
-            }
-
-            std::vector<std::multimap<size_t, std::shared_ptr<Drawing>>::iterator> to_erase;
-
-            for (auto iter = mDrawings.begin(); iter != mDrawings.end(); ++iter) {
-                if (iter->second->mID == id) {
-                    to_erase.push_back(iter);
-                }
-            }
-
-            for (auto& iter : to_erase) {
-                mDrawings.erase(iter);
-            }
-
-            return *this;
-        }
-
-        Derma& ClearDrawingsAll() {
-            mDrawings.clear();
-
-            return *this;
         }
     };
 }

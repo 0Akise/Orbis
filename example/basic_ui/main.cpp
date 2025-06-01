@@ -49,24 +49,37 @@ int main() {
     // Orbis uses Chaining to create UI Dermas and Widgets.
     // If you think the code might get too long, you can make separate file to store all UIs
     // in the same way described here.
-    auto example_button = UI::CreateWidget<WidgetType::Button>();
-    example_button.SetSize({100, 50});
+    auto example_frame = UI::CreateWidget<WidgetType::Panel>();
+    example_frame
+        // !! Drawings use local position of Widget !!
+        .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
+        .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
+        .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}))
+        .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
+        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
+        .DrawTexture({32, 32}, {15, 90}, 10, sf::Color::White, *ap_texture)
+        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *hp_texture);
 
-    auto example_frame = UI::CreateDerma(context);
-    example_frame.SetName("MyFrame")
+    auto example_button = UI::CreateWidget<WidgetType::Button>();
+    example_button
+        .SetSize({100, 50});
+
+    auto my_hud = UI::CreateDerma(context);
+    my_hud
+        .SetName("MyHUD")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
         // Be sure to set Z-Level for each Derma!
         .SetZLevel(1)
-        // !! Widgets and Drawings use local position of Derma !!
-        .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
-        .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
-        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
-        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *hp_texture)
-        .DrawTexture({32, 32}, {15, 90}, 10, sf::Color::White, *ap_texture)
-        .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
-        .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}))
-        .AddWidget(example_button, {100, 100});
+        .AddWidget(example_frame, {100, 100});
+
+    auto my_window = UI::CreateDerma(context);
+    my_window
+        .SetName("MyWindow")
+        .SetSize({400, 400})
+        .SetPosition({100, 100})
+        .SetZLevel(10)
+        .AddWidget(example_button, {50, 50});
 
     /*
     auto& window_example1 = UI::CreateDerma<Window>();

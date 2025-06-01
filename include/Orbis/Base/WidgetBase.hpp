@@ -18,6 +18,7 @@ namespace Orbis {
     private:
         sf::Vector2f mSize = {0, 0};
         sf::Vector2f mPosition = {0, 0};
+        sf::Vector2f mPositionOffset = {0, 0};
         size_t mZLevel = 0;
 
         std::multimap<size_t, std::shared_ptr<Drawing>> mDrawings;
@@ -42,6 +43,10 @@ namespace Orbis {
             return std::dynamic_pointer_cast<T>(WidgetBase::shared_from_this());
         }
 
+        void SetPositionOffset(sf::Vector2f offset) {
+            mPositionOffset = offset;
+        }
+
         sf::Vector2f GetSize() const {
             return mSize;
         }
@@ -51,7 +56,7 @@ namespace Orbis {
         }
 
         sf::Vector2f GetPositionGlobal() const {
-            return mPosition + mSize;
+            return mPosition + mPositionOffset;
         }
 
         size_t GetZLevel() const {

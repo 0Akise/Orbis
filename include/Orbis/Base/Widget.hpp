@@ -8,6 +8,7 @@
 
 namespace Orbis {
     enum class WidgetType {
+        Panel,
         Button,
     };
 
@@ -17,13 +18,18 @@ namespace Orbis {
         Pressed,
     };
 
+    class Panel : public WidgetBase<Panel> {
+    public:
+        explicit Panel() {}
+    };
+
     class Button : public WidgetBase<Button> {
     private:
         ButtonState mState;
+        std::string mText;
         sf::Color mColorNormal = sf::Color::White;
         sf::Color mColorHover = sf::Color::White;
         sf::Color mColorPressed = sf::Color::White;
-        std::string mText;
         std::function<void()> mCallback;
 
     public:
@@ -31,6 +37,10 @@ namespace Orbis {
             : WidgetBase<Button>(),
               mState(ButtonState::Normal),
               mText("") {}
+
+        const std::string& GetText() const {
+            return mText;
+        }
 
         sf::Color GetStateColor() const {
             switch (mState) {
@@ -41,10 +51,6 @@ namespace Orbis {
                 default:
                     return mColorNormal;
             }
-        }
-
-        const std::string& GetText() const {
-            return mText;
         }
 
         Button& SetStateColor(ButtonState state, sf::Color color) {
@@ -79,6 +85,11 @@ namespace Orbis {
     template <typename T>
     struct WidgetTypeMap {
         static constexpr WidgetType value = static_cast<WidgetType>(-1);
+    };
+
+    template <>
+    struct WidgetTypeMap<Panel> {
+        static constexpr WidgetType value = WidgetType::Panel;
     };
 
     template <>
