@@ -4,12 +4,12 @@
 #include <memory>
 #include <vector>
 
-#include "Orbis/Base/DermaEvent.hpp"
 #include "Orbis/Base/Drawing.hpp"
+#include "Orbis/Base/PanelEvent.hpp"
 #include "Orbis/Base/WidgetInterface.hpp"
 
 namespace Orbis {
-    enum class DermaOption : uint32_t {
+    enum class PanelOption : uint32_t {
         None = 0,
         Selectable = 1 << 0,
         Movable = 1 << 1,
@@ -18,15 +18,15 @@ namespace Orbis {
         Default = Selectable | Movable | Resizable
     };
 
-    inline DermaOption operator|(DermaOption a, DermaOption b) {
-        return static_cast<DermaOption>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+    inline PanelOption operator|(PanelOption a, PanelOption b) {
+        return static_cast<PanelOption>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
     }
 
-    inline DermaOption operator&(DermaOption a, DermaOption b) {
-        return static_cast<DermaOption>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+    inline PanelOption operator&(PanelOption a, PanelOption b) {
+        return static_cast<PanelOption>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
     }
 
-    class Derma {
+    class Panel {
     private:
         size_t mID;
         std::string mName = "Unnamed";
@@ -34,9 +34,9 @@ namespace Orbis {
         sf::Vector2f mPosition = {0, 0};
         size_t mZLevel = 0;
 
-        DermaEventHandler mEventHandler;
+        PanelEventHandler mEventHandler;
 
-        DermaOption mOptionFlag = DermaOption::None;
+        PanelOption mOptionFlag = PanelOption::None;
         sf::Vector2f mOffset;
         bool mIsSelected = false;
         bool mIsMoving = false;
@@ -51,7 +51,7 @@ namespace Orbis {
         bool mIsVisible = true;
 
     public:
-        Derma& AddWidget(const auto& widget_handle, const sf::Vector2f& position, size_t z_level = 0) {
+        Panel& AddWidget(const auto& widget_handle, const sf::Vector2f& position, size_t z_level = 0) {
             auto widget_ptr = widget_handle.GetWidgetShared();
 
             widget_ptr->SetPositionOffset(position);
@@ -61,7 +61,7 @@ namespace Orbis {
             return *this;
         }
 
-        Derma& MoveWidget(const auto& widget_handle, const sf::Vector2f& position) {
+        Panel& MoveWidget(const auto& widget_handle, const sf::Vector2f& position) {
             auto widget_ptr = widget_handle.GetWidgetShared();
 
             widget_ptr->SetPositionOffset(position);
@@ -70,22 +70,22 @@ namespace Orbis {
         void InitializeOptions() {
             mEventHandler.DeregisterListener();
 
-            if (HasOption(DermaOption::Selectable))
-                RegisterOption(DermaOption::Selectable);
-            if (HasOption(DermaOption::Movable))
-                RegisterOption(DermaOption::Movable);
-            if (HasOption(DermaOption::Resizable))
-                RegisterOption(DermaOption::Resizable);
+            if (HasOption(PanelOption::Selectable))
+                RegisterOption(PanelOption::Selectable);
+            if (HasOption(PanelOption::Movable))
+                RegisterOption(PanelOption::Movable);
+            if (HasOption(PanelOption::Resizable))
+                RegisterOption(PanelOption::Resizable);
         }
 
-        void RegisterOption(DermaOption flag) {
+        void RegisterOption(PanelOption flag) {
             switch (flag) {
-                case DermaOption::Selectable:
-                    mEventHandler.RegisterListener(EventType::MouseDown, [this](const DermaEvent& event) {
+                case PanelOption::Selectable:
+                    mEventHandler.RegisterListener(EventType::MouseDown, [this](const PanelEvent& event) {
                         mIsSelected = event.mIsInBounds;
                     });
 
-                    mEventHandler.RegisterListener(EventType::MouseDown, [this](const DermaEvent& event) {
+                    mEventHandler.RegisterListener(EventType::MouseDown, [this](const PanelEvent& event) {
                         if (event.mIsInBounds) {
                             mIsSelected = true;
                         }
@@ -93,26 +93,26 @@ namespace Orbis {
 
                     break;
 
-                case DermaOption::Movable:
-                    mEventHandler.RegisterListener(EventType::MouseLDown, [this](const DermaEvent& event) {
+                case PanelOption::Movable:
+                    mEventHandler.RegisterListener(EventType::MouseLDown, [this](const PanelEvent& event) {
                         if (event.mIsInBounds == true) {
                             mIsMoving = true;
                             mOffset = event.mControls.mMouse.mPosition - event.mPosition;
                         }
                     });
-                    mEventHandler.RegisterListener(EventType::MouseMove, [this](const DermaEvent& event) {
+                    mEventHandler.RegisterListener(EventType::MouseMove, [this](const PanelEvent& event) {
                         if (mIsMoving == true) {
                             SetPosition(event.mControls.mMouse.mPosition - mOffset);
                         }
                     });
-                    mEventHandler.RegisterListener(EventType::MouseLUp, [this](const DermaEvent&) {
+                    mEventHandler.RegisterListener(EventType::MouseLUp, [this](const PanelEvent&) {
                         mIsMoving = false;
                     });
 
                     break;
 
-                case DermaOption::Resizable:
-                    mEventHandler.RegisterListener(EventType::MouseRDown, [this](const DermaEvent& event) {
+                case PanelOption::Resizable:
+                    mEventHandler.RegisterListener(EventType::MouseRDown, [this](const PanelEvent& event) {
                         sf::Vector2f window_br = event.mPosition + event.mSize;
                         sf::Vector2f size_handle = {10.0f, 10.0f};
                         sf::Vector2f pos_handle = {window_br.x - 10.0f, window_br.y - 10.0f};
@@ -122,7 +122,7 @@ namespace Orbis {
                             mOffset = event.mControls.mMouse.mPosition - window_br;
                         }
                     });
-                    mEventHandler.RegisterListener(EventType::MouseMove, [this](const DermaEvent& event) {
+                    mEventHandler.RegisterListener(EventType::MouseMove, [this](const PanelEvent& event) {
                         if (mIsResizing == true) {
                             sf::Vector2f pos_new_br = event.mControls.mMouse.mPosition - mOffset;
                             sf::Vector2f size_new = pos_new_br - event.mPosition;
@@ -133,7 +133,7 @@ namespace Orbis {
                             SetSize(size_new);
                         }
                     });
-                    mEventHandler.RegisterListener(EventType::MouseRUp, [this](const DermaEvent&) {
+                    mEventHandler.RegisterListener(EventType::MouseRUp, [this](const PanelEvent&) {
                         mIsResizing = false;
                     });
 
@@ -144,9 +144,9 @@ namespace Orbis {
             }
         }
 
-        Derma& AddOption(DermaOption flag) {
-            if ((mOptionFlag & flag) == DermaOption::None) {
-                mOptionFlag = static_cast<DermaOption>(static_cast<uint32_t>(mOptionFlag) | static_cast<uint32_t>(flag));
+        Panel& AddOption(PanelOption flag) {
+            if ((mOptionFlag & flag) == PanelOption::None) {
+                mOptionFlag = static_cast<PanelOption>(static_cast<uint32_t>(mOptionFlag) | static_cast<uint32_t>(flag));
 
                 RegisterOption(flag);
             }
@@ -154,9 +154,9 @@ namespace Orbis {
             return *this;
         }
 
-        Derma& RemoveOption(DermaOption flag) {
+        Panel& RemoveOption(PanelOption flag) {
             if ((mOptionFlag & flag) == flag) {
-                mOptionFlag = static_cast<DermaOption>(static_cast<uint32_t>(mOptionFlag) & ~static_cast<uint32_t>(flag));
+                mOptionFlag = static_cast<PanelOption>(static_cast<uint32_t>(mOptionFlag) & ~static_cast<uint32_t>(flag));
 
                 InitializeOptions();
             }
@@ -164,7 +164,7 @@ namespace Orbis {
             return *this;
         }
 
-        Derma& SetOptions(DermaOption flags) {
+        Panel& SetOptions(PanelOption flags) {
             mOptionFlag = flags;
 
             InitializeOptions();
@@ -172,11 +172,11 @@ namespace Orbis {
             return *this;
         }
 
-        bool HasOption(DermaOption flag) const noexcept {
+        bool HasOption(PanelOption flag) const noexcept {
             return (mOptionFlag & flag) == flag;
         }
 
-        bool HasOptionFlag(DermaOption flags, DermaOption flag) const {
+        bool HasOptionFlag(PanelOption flags, PanelOption flag) const {
             return (flags & flag) == flag;
         }
 
@@ -203,37 +203,37 @@ namespace Orbis {
                    ((pos_global.y <= cursor_position.y) && (cursor_position.y <= pos_global.y + mSize.y));
         }
 
-        Derma& SetID(size_t id) {
+        Panel& SetID(size_t id) {
             mID = id;
 
             return *this;
         }
 
-        Derma& SetName(const std::string& name) {
+        Panel& SetName(const std::string& name) {
             mName = name;
 
             return *this;
         }
 
-        Derma& SetSize(const sf::Vector2f& size) {
+        Panel& SetSize(const sf::Vector2f& size) {
             mSize = size;
 
             return *this;
         }
 
-        Derma& SetPosition(const sf::Vector2f& position) {
+        Panel& SetPosition(const sf::Vector2f& position) {
             mPosition = position;
 
             return *this;
         }
 
-        Derma& SetZLevel(size_t z_level) {
+        Panel& SetZLevel(size_t z_level) {
             mZLevel = z_level;
 
             return *this;
         }
 
-        Derma& SetVisible(bool is_visible) {
+        Panel& SetVisible(bool is_visible) {
             mIsVisible = is_visible;
 
             return *this;
@@ -258,7 +258,7 @@ namespace Orbis {
         void ProcessControls(const Controls& controls) {
             mIsInBounds = IsInBounds(controls.mMouse.mPosition);
 
-            DermaEvent event_base;
+            PanelEvent event_base;
             event_base.mPosition = GetPositionGlobal();
             event_base.mSize = mSize;
             event_base.mZLevel = mZLevel;
@@ -269,30 +269,30 @@ namespace Orbis {
             event_base.mControls.mMouse.mWPress = controls.mMouse.mWPress;
             event_base.mIsVisible = mIsVisible;
 
-            DermaEvent event_move = event_base;
+            PanelEvent event_move = event_base;
             event_move.mType = EventType::MouseMove;
             mEventHandler.EmitEvent(event_move);
 
             if ((event_base.mControls.mMouse.mLPress == true) && (mControlsPrevious.mMouse.mLPress == false)) {
-                DermaEvent event_mouse_down = event_base;
+                PanelEvent event_mouse_down = event_base;
 
                 event_mouse_down.mType = EventType::MouseLDown;
 
                 mEventHandler.EmitEvent(event_mouse_down);
             } else if ((event_base.mControls.mMouse.mLPress == false) && (mControlsPrevious.mMouse.mLPress == true)) {
-                DermaEvent event_mouse_up = event_base;
+                PanelEvent event_mouse_up = event_base;
 
                 event_mouse_up.mType = EventType::MouseLUp;
                 mEventHandler.EmitEvent(event_mouse_up);
             }
 
             if ((event_base.mControls.mMouse.mRPress == true) && (mControlsPrevious.mMouse.mRPress == false)) {
-                DermaEvent event_mouse_down = event_base;
+                PanelEvent event_mouse_down = event_base;
 
                 event_mouse_down.mType = EventType::MouseRDown;
                 mEventHandler.EmitEvent(event_mouse_down);
             } else if ((event_base.mControls.mMouse.mRPress == false) && (mControlsPrevious.mMouse.mRPress == true)) {
-                DermaEvent event_mouse_up = event_base;
+                PanelEvent event_mouse_up = event_base;
 
                 event_mouse_up.mType = EventType::MouseRUp;
                 mEventHandler.EmitEvent(event_mouse_up);

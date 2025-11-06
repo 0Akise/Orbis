@@ -7,14 +7,11 @@
 - SFML を使用するにあたって自分でゼロから GUI を構築する必要なく、迅速な開発をサポートするために作られた高いカスタム性と取り扱いやすさを中心として開発を進めている 2D/3D GUI ライブラリーです。対応 C++ は 20 から、そしてライセンスは MIT を使用しています。
 
 ## 機能
-- プロジェクトに適用しやすいヘッダーオンリーライブラリー
-- C++20を使用することで現代的かつクリーンなコード
-- Vulkan と SFML3 を両立することで2D/3D両方でのGUI開発をサポート
-- チェーン型宣言でカスタム性の高い構造
-- 直観的な静的 API 構成で迅速な開発をサポート
-
-## Derma とは?
-_Derma_ は 古代ギリシャ語で "肌(Skin)"の意味を持ちます。ゲームのスキンシステムに例えると、一つの武器や装備に対して様々なスキンがあると同様、Orbis はベースとなる UI コンポーネントを構築して「自分の好みに合わせたUIデザインを迅速かつ確実に作る」ことを目標として開発されているライブラリーです。
+- 💠 プロジェクトに適用しやすいヘッダーオンリーライブラリー
+- 💥 C++20を使用することで現代的かつクリーンなコード
+- ✅ Vulkan と SFML3 を両立することで2D/3D両方でのGUI開発をサポート
+- 💚 チェーン型宣言でカスタム性の高い構造
+- 💨 直観的な静的 API 構成で迅速な開発をサポート
 
 # Requirements
 - C++20 コンパイラー (MinGW)
@@ -27,17 +24,27 @@ SFML 固有の C++ コンパイルに関する詳細情報は [SFML3 ダウン�
 # 使用例
 プロジェクト内の `example` フォルダーをご確認ください。
 ```cpp
-// ゲームのHUDなど、描画してカスタマイズできるフレームを作成します。
-auto& frame = *UI::Create(DType::DFrame);
-frame.SetName("Main Frame")
-    .SetSize({400.0f, 200.0f})
-    .SetPosition({10.0f, 10.0f})
-    .DrawRect({380.0f, 180.0f}, {10.0f, 10.0f}, 0, sf::Color::White);
+sf::RenderWindow window(sf::VideoMode(...), "...", sf::Style::Default);
+UIContext context;
 
-UI::ShowDermaList();
-// SFMLのメインゲームループ内で
-UI::Update(window);
-UI::Render(window);
+UI::Initialize();
+UI::Bind(window, context);
+
+auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
+
+auto example_button = UI::CreateWidget(WidgetType::Button);
+example_button.SetSize(100, 50);
+
+auto example_window = UI::CreateDerma(context);
+example_window.SetName("MyWindow")
+        .SetSize({400, 200})
+        .SetPosition({0, screen_size.y - 200})
+        .SetZLevel(1)
+        .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
+        .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
+        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
+        ...
+        .AddWidget(example_button, {100, 100});
 ```
 - UI クラスは静的・シングルトンパターンを使用しており、自分の作るUIがどのような動作をすべきか直接制御できるよう設計されています。
 - ドットでコマンドを連鎖させることで、Derma の高いカスタマイズ性を実現します。
@@ -75,7 +82,7 @@ cmake --build build --config Release
 ```
 
 # ロードマップ
-- [ ] DButton 実装
+- [ ] implementation of Widget creation
 
 # 共同開発
 プロジェクト内の `CONTRIBUTION.md` ファイル(英語)をご確認ください。

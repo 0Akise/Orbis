@@ -13,6 +13,9 @@ namespace Orbis {
     public:
         virtual ~WidgetInterface() = default;
 
+        virtual void SetPositionOffset(sf::Vector2f offset) = 0;
+        virtual sf::Vector2f GetPositionGlobal() const = 0;
+
         virtual void Update(const Controls& controls) = 0;
         virtual void Render(sf::RenderWindow& window) = 0;
     };

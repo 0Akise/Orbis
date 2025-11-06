@@ -17,21 +17,10 @@ include(FetchContent)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-target_include_directories(
-    Orbis INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-target_compile_features(
-    Orbis INTERFACE
-    cxx_std_20)
+target_include_directories(Orbis INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+target_compile_features(Orbis INTERFACE cxx_std_20)
 
-FetchContent_Declare(
-    SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_BRANCH master
-    GIT_SHALLOW ON
-    EXCLUDE_FROM_ALL
-    SYSTEM)
+FetchContent_Declare(SFML GIT_REPOSITORY https://github.com/SFML/SFML.git GIT_BRANCH master GIT_SHALLOW ON EXCLUDE_FROM_ALL SYSTEM)
 FetchContent_MakeAvailable(SFML)
 
 set(SFML_LIBRARIES sfml-system sfml-window sfml-graphics sfml-audio sfml-network)
@@ -56,23 +45,8 @@ endif()
 install(TARGETS Orbis EXPORT OrbisTargets)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-write_basic_package_version_file(
-    "OrbisConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion)
+write_basic_package_version_file("OrbisConfigVersion.cmake" VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
+configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/OrbisConfig.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfig.cmake" INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
 
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/OrbisConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
-
-install(
-    FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
-install(
-    EXPORT OrbisTargets
-    FILE OrbisTargets.cmake
-    NAMESPACE Orbis::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/OrbisConfigVersion.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)
+install(EXPORT OrbisTargets FILE OrbisTargets.cmake NAMESPACE Orbis:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Orbis)

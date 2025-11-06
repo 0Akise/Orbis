@@ -48,18 +48,6 @@ namespace Orbis {
             return *this;
         }
 
-        auto SetText(const std::string& text) -> decltype(mWidget->SetText(text), *this) {
-            mWidget->SetText(text);
-
-            return *this;
-        }
-
-        auto SetCallback(std::function<void()> callback) -> decltype(mWidget->SetCallback(callback), *this) {
-            mWidget->SetCallback(callback);
-
-            return *this;
-        }
-
         WidgetHandle& DrawRect(
             sf::Vector2f size,
             sf::Vector2f position,
@@ -94,8 +82,22 @@ namespace Orbis {
             sf::Color fill_color,
             sf::Texture texture,
             bool smoothing_enabled = true) {
-            mWidget->Drawtexture(size, position, zlevel, fill_color, texture, smoothing_enabled);
+            mWidget->DrawTexture(size, position, zlevel, fill_color, texture, smoothing_enabled);
 
+            return *this;
+        }
+
+        template <typename U = T>
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&>
+        SetText(const std::string& text) {
+            static_cast<Button*>(mWidget.get())->SetText(text);
+            return *this;
+        }
+
+        template <typename U = T>
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&>
+        SetCallback(std::function<void()> callback) {
+            static_cast<Button*>(mWidget.get())->SetCallback(callback);
             return *this;
         }
     };

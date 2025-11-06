@@ -43,7 +43,7 @@ namespace Orbis {
             return std::dynamic_pointer_cast<T>(WidgetBase::shared_from_this());
         }
 
-        void SetPositionOffset(sf::Vector2f offset) {
+        void SetPositionOffset(sf::Vector2f offset) override {
             mPositionOffset = offset;
         }
 
@@ -55,7 +55,7 @@ namespace Orbis {
             return mPosition;
         }
 
-        sf::Vector2f GetPositionGlobal() const {
+        sf::Vector2f GetPositionGlobal() const override {
             return mPosition + mPositionOffset;
         }
 

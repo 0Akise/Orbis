@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <Orbis/UI.hpp>
 #include <Orbis/Utils.hpp>
 
@@ -23,6 +25,7 @@ struct AnimationState {
 int main() {
     sf::Vector2f screen_size({1080, 720});
 
+    // Create Game window and UI context
     sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Orbis Examples 1: Basic HUD", sf::Style::Default);
     UIContext context;
 
@@ -37,9 +40,10 @@ int main() {
     hp_anim.mCurrent = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
     ap_anim.mCurrent = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
 
-    // Declare your UI class instance.
+    // Now we bind each context to each window. you can have multiple context and windows.
     UI::Initialize();
     UI::Bind(window, context);
+
     // load your desired resources to UI so the UI class can access them.
     // If loading fails(such as wrong path), Load* functions will throw exception.
     auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
@@ -71,7 +75,7 @@ int main() {
         .SetPosition({0, screen_size.y - 200})
         // Be sure to set Z-Level for each Derma!
         .SetZLevel(1)
-        .AddWidget(example_frame, {100, 100});
+        .AddWidget(example_frame, {0, 0});
 
     auto my_window = UI::CreateDerma(context);
     my_window
@@ -149,7 +153,7 @@ int main() {
     */
 
     // for debugging purpose, you can list up dermas in console/terminal.
-    UI::ShowDermaList(context);
+    UI::ShowPanelList(context);
 
     while (window.isOpen()) {
         // be sure to update UI before while loop usually used in SFML examples.

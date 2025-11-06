@@ -18,10 +18,6 @@
 - 💚 Highly customizable UI Components
 - 💨 Intuitive API for rapid development
 
-## What's Derma?
-_Derma_ means "Skin" in ancient Greek (the same _derma_ as in _dermatologist_). Think of it like weapon skins in games - you have a base weapon that can be decorated with various designs.
-In the same way, Orbis's Derma system lets you build interactive GUIs with your design choices quickly and reliably. Create the structure once, then customize the appearance as needed.
-
 # Requirements
 - C++20 compiler (MinGW)
 - SFML 3.0.0
@@ -34,29 +30,22 @@ If possible, use LLVM-MinGW with UCRT which you can download from [Here](https:/
 # Usage
 Check out `example` folder for further information.
 ```cpp
-// declare UIContext
 sf::RenderWindow window(sf::VideoMode(...), "...", sf::Style::Default);
 UIContext context;
 
-// Initialize Global UI instance and bind window and it's context
 UI::Initialize();
 UI::Bind(window, context);
 
-// Load resources to appropriate context which will be automatically loaded to SFML window
 auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
 
-// Declare reusable widgets. Widgets are NOT dependant on context, you can re-use it freely
 auto example_button = UI::CreateWidget(WidgetType::Button);
 example_button.SetSize(100, 50);
 
-// Declare Derma, which contains both widget and drawings. see AddWidget function at the last?
 auto example_window = UI::CreateDerma(context);
 example_window.SetName("MyWindow")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
-        // Be sure to set Z-Level for each Derma!
         .SetZLevel(1)
-        // !! Widgets and Drawings use local position of Derma !!
         .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
         .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
         .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
@@ -99,7 +88,7 @@ If you want to try out examples, run with following:
 ```
 
 # Roadmap
-- [x] implementation of DButton
+- [ ] implementation of Widget creation
 
 # Contribution
 Please check `CONTRIBUTION.md` for guidelines and information on how to contribute to the project.

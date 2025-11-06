@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Orbis/Base/Derma.hpp"
+#include "Orbis/Base/Panel.hpp"
+#include "Orbis/Base/PanelHandle.hpp"
 #include "Orbis/Base/Widget.hpp"
 #include "Orbis/Base/WidgetBase.hpp"
 #include "Orbis/Base/WidgetHandle.hpp"
@@ -17,11 +18,11 @@ namespace Orbis {
         Controls mControls;
         ResourceVault mResourceVault;
 
-        std::vector<std::shared_ptr<Derma>> mDermas;
+        std::vector<std::shared_ptr<Panel>> mPanels;
         std::vector<std::shared_ptr<WidgetInterface>> mWidgets;
         size_t mDermaIDs = 0;
 
-        std::weak_ptr<Derma> mSelectedDerma;
+        std::weak_ptr<Panel> mSelectedDerma;
         bool mZLevelIsDirty = false;
 
     public:
@@ -29,8 +30,8 @@ namespace Orbis {
             return mResourceVault;
         }
 
-        void AddDerma(std::shared_ptr<Derma> derma) {
-            mDermas.push_back(derma);
+        void AddPanel(std::shared_ptr<Panel> panel) {
+            mPanels.push_back(panel);
         }
 
         template <typename T>
@@ -49,11 +50,11 @@ namespace Orbis {
             }
         }
 
-        size_t GetDermaID() {
+        size_t GetPanelID() {
             return mDermaIDs;
         }
 
-        void SetDermaID() {
+        void SetPanelID() {
             mDermaIDs++;
         }
 
@@ -61,14 +62,14 @@ namespace Orbis {
             mZLevelIsDirty = true;
         }
 
-        void NotifyDermaSelected(std::shared_ptr<Derma> derma) {
+        void NotifySelected(std::shared_ptr<Panel> panel) {
             auto previous = mSelectedDerma.lock();
 
-            if ((previous != nullptr) && (previous != derma)) {
+            if ((previous != nullptr) && (previous != panel)) {
                 mZLevelIsDirty = true;
             }
 
-            mSelectedDerma = derma;
+            mSelectedDerma = panel;
         }
 
         void RecalculateZLevels() {
@@ -79,13 +80,13 @@ namespace Orbis {
             mZLevelIsDirty = false;
         }
 
-        void ShowDermaList() {
+        void ShowPanelList() {
             std::cout << "UI Dermas Listing\n";
             std::cout << "=====================\n";
 
-            for (auto& derma : mDermas) {
-                std::cout << "ID: " << derma->GetID() << "\t"
-                          << "Name: " << derma->GetName() << "\n";
+            for (auto& panel : mPanels) {
+                std::cout << "ID: " << panel->GetID() << "\t"
+                          << "Name: " << panel->GetName() << "\n";
             }
 
             std::cout << std::endl;
@@ -98,8 +99,8 @@ namespace Orbis {
             mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
             mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
 
-            for (auto& derma : mDermas) {
-                derma->Update(mControls);
+            for (auto& panel : mPanels) {
+                panel->Update(mControls);
             }
         }
 
@@ -108,8 +109,8 @@ namespace Orbis {
                 RecalculateZLevels();
             }
 
-            for (auto& derma : mDermas) {
-                derma->Render(window);
+            for (auto& panel : mPanels) {
+                panel->Render(window);
             }
         }
     };
@@ -151,14 +152,14 @@ namespace Orbis {
             UIManager::Get().Bind(window, context);
         }
 
-        static Derma& CreateDerma(UIContext& context) {
-            auto derma = std::make_shared<Derma>();
+        static PanelHandle CreateDerma(UIContext& context) {
+            auto panel = std::make_shared<Panel>();
 
-            derma->SetID(context.GetDermaID());
-            context.SetDermaID();
-            context.AddDerma(derma);
+            panel->SetID(context.GetPanelID());
+            context.SetPanelID();
+            context.AddPanel(panel);
 
-            return *derma;
+            return PanelHandle(panel);
         }
 
         template <WidgetType Type>
@@ -190,8 +191,8 @@ namespace Orbis {
             context.AccessResourceVault().ClearAllResources();
         }
 
-        static inline void ShowDermaList(UIContext& context) {
-            context.ShowDermaList();
+        static inline void ShowPanelList(UIContext& context) {
+            context.ShowPanelList();
         }
 
         static inline void Update(sf::RenderWindow& window) {

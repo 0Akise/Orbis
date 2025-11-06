@@ -28,7 +28,7 @@ namespace Orbis {
         VisibilityChanged,
     };
 
-    struct DermaEvent {
+    struct PanelEvent {
         EventType mType;
 
         sf::Vector2f mPosition;
@@ -41,10 +41,10 @@ namespace Orbis {
         bool mIsVisible;
     };
 
-    using EventCallback = std::function<void(const DermaEvent&)>;
+    using EventCallback = std::function<void(const PanelEvent&)>;
     using NotifyCallback = std::function<void(EventType, const void*)>;
 
-    class DermaEventHandler {
+    class PanelEventHandler {
     private:
         std::unordered_map<EventType, std::vector<EventCallback>> mListeners;
 
@@ -57,7 +57,7 @@ namespace Orbis {
             // do stuff
         }
 
-        void EmitEvent(const DermaEvent& event) {
+        void EmitEvent(const PanelEvent& event) {
             auto iter = mListeners.find(event.mType);
 
             if ((iter != mListeners.end()) && (iter->second.empty() == false)) {
