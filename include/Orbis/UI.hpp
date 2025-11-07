@@ -20,9 +20,9 @@ namespace Orbis {
 
         std::vector<std::shared_ptr<Panel>> mPanels;
         std::vector<std::shared_ptr<WidgetInterface>> mWidgets;
-        size_t mDermaIDs = 0;
+        size_t mPanelIDs = 0;
 
-        std::weak_ptr<Panel> mSelectedDerma;
+        std::weak_ptr<Panel> mSelectedPanel;
         bool mZLevelIsDirty = false;
 
     public:
@@ -51,11 +51,11 @@ namespace Orbis {
         }
 
         size_t GetPanelID() {
-            return mDermaIDs;
+            return mPanelIDs;
         }
 
         void SetPanelID() {
-            mDermaIDs++;
+            mPanelIDs++;
         }
 
         void NotifyZLevelChanged() {
@@ -63,13 +63,13 @@ namespace Orbis {
         }
 
         void NotifySelected(std::shared_ptr<Panel> panel) {
-            auto previous = mSelectedDerma.lock();
+            auto previous = mSelectedPanel.lock();
 
             if ((previous != nullptr) && (previous != panel)) {
                 mZLevelIsDirty = true;
             }
 
-            mSelectedDerma = panel;
+            mSelectedPanel = panel;
         }
 
         void RecalculateZLevels() {
@@ -81,7 +81,7 @@ namespace Orbis {
         }
 
         void ShowPanelList() {
-            std::cout << "UI Dermas Listing\n";
+            std::cout << "UI Panels Listing\n";
             std::cout << "=====================\n";
 
             for (auto& panel : mPanels) {
@@ -152,7 +152,7 @@ namespace Orbis {
             UIManager::Get().Bind(window, context);
         }
 
-        static PanelHandle CreateDerma(UIContext& context) {
+        static PanelHandle CreatePanel(UIContext& context) {
             auto panel = std::make_shared<Panel>();
 
             panel->SetID(context.GetPanelID());

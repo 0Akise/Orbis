@@ -30,18 +30,20 @@ If possible, use LLVM-MinGW with UCRT which you can download from [Here](https:/
 # Usage
 Check out `example` folder for further information.
 ```cpp
-sf::RenderWindow window(sf::VideoMode(...), "...", sf::Style::Default);
+sf::RenderWindow window(...);
 UIContext context;
 
 UI::Initialize();
 UI::Bind(window, context);
 
-auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
+auto my_font = UI::LoadFont("./res/roboto.ttf");
 
 auto example_button = UI::CreateWidget(WidgetType::Button);
+
 example_button.SetSize(100, 50);
 
-auto example_window = UI::CreateDerma(context);
+auto example_window = UI::CreatePanel();
+
 example_window.SetName("MyWindow")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
@@ -53,7 +55,7 @@ example_window.SetName("MyWindow")
         .AddWidget(example_button, {100, 100});
 ```
 - UI Class uses static/singleton pattern, which gives you direct control of how the UI should work.
-- by chaining commands with dots, you can control your Derma components with high customizability.
+- by chaining commands with dots, you can control your Panel components with high customizability.
 
 ## Install
 add the follwing lines to your project's `CMakeLists.txt`:

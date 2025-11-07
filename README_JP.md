@@ -6,6 +6,9 @@
 
 - SFML を使用するにあたって自分でゼロから GUI を構築する必要なく、迅速な開発をサポートするために作られた高いカスタム性と取り扱いやすさを中心として開発を進めている 2D/3D GUI ライブラリーです。対応 C++ は 20 から、そしてライセンスは MIT を使用しています。
 
+> [!CAUTION]
+> このドキュメントは現在アップデートが必要です。
+
 ## 機能
 - 💠 プロジェクトに適用しやすいヘッダーオンリーライブラリー
 - 💥 C++20を使用することで現代的かつクリーンなコード
@@ -24,18 +27,20 @@ SFML 固有の C++ コンパイルに関する詳細情報は [SFML3 ダウン�
 # 使用例
 プロジェクト内の `example` フォルダーをご確認ください。
 ```cpp
-sf::RenderWindow window(sf::VideoMode(...), "...", sf::Style::Default);
+sf::RenderWindow window(...);
 UIContext context;
 
 UI::Initialize();
 UI::Bind(window, context);
 
-auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
+auto my_font = UI::LoadFont("./res/roboto.ttf");
 
 auto example_button = UI::CreateWidget(WidgetType::Button);
+
 example_button.SetSize(100, 50);
 
-auto example_window = UI::CreateDerma(context);
+auto example_window = UI::CreatePanel();
+
 example_window.SetName("MyWindow")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
@@ -47,7 +52,7 @@ example_window.SetName("MyWindow")
         .AddWidget(example_button, {100, 100});
 ```
 - UI クラスは静的・シングルトンパターンを使用しており、自分の作るUIがどのような動作をすべきか直接制御できるよう設計されています。
-- ドットでコマンドを連鎖させることで、Derma の高いカスタマイズ性を実現します。
+- ドットでコマンドを連鎖させることで、Panel の高いカスタマイズ性を実現します。
 
 ## インストール
 これらのコードを自分のプロジェクトの `CMakeLists.txt` に書き加えます。

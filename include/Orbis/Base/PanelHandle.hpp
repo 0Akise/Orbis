@@ -21,11 +21,11 @@ namespace Orbis {
             return *mPanel;
         }
 
-        Panel& GetDerma() {
+        Panel& GetPanel() {
             return *mPanel;
         }
 
-        std::shared_ptr<Panel> GetDermaShared() const {
+        std::shared_ptr<Panel> GetPanelShared() const {
             return mPanel;
         }
 

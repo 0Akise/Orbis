@@ -1,7 +1,10 @@
+// WARNING: Currently working on massive migration!
+// THIS CODE IS A CONCEPT FOR NOW, NOT A WORKING EXAMPLE!
+
 #include <iostream>
 
+#include <Orbis/System/Utils.hpp>
 #include <Orbis/UI.hpp>
-#include <Orbis/Utils.hpp>
 
 using namespace Orbis;
 
@@ -9,8 +12,6 @@ using namespace Orbis;
 struct Player {
     int mHealthMax = 100;
     int mHealthCurrent = 100;
-    int mArmorMax = 100;
-    int mArmorCurrent = 0;
 };
 
 struct AnimationState {
@@ -22,91 +23,68 @@ struct AnimationState {
     float mDuration = 0.5f;
 };
 
+// more game code...
+
+// SFML Entrance
 int main() {
     sf::Vector2f screen_size({1080, 720});
 
-    // Create Game window and UI context
-    sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Orbis Examples 1: Basic HUD", sf::Style::Default);
+    // Create Game window and UI context. You can have multiple windows and contexts!
+    sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Orbis Examples: Basics", sf::Style::Default);
     UIContext context;
 
+    // Settings for SFML game window
     window.setFramerateLimit(120);
     window.setVerticalSyncEnabled(false);
 
-    Player player;
+    // Don't forget to initialize UI system to create UI cache!
+    // Now you can bind each UI context to the window you want.
+    UI::Initialize();
+    UI::Bind(window, context);
 
+    // Some game code you desire. this is an example.
+    // Orbis provides some utility functions for UI making such as smooth lerp.
+    Player player;
     AnimationState hp_anim;
     AnimationState ap_anim;
 
     hp_anim.mCurrent = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
     ap_anim.mCurrent = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
 
-    // Now we bind each context to each window. you can have multiple context and windows.
-    UI::Initialize();
-    UI::Bind(window, context);
+    // more game codes...
 
-    // load your desired resources to UI so the UI class can access them.
+    // load your desired resources to UI cache so you can reuse them across different UI contexts.
     // If loading fails(such as wrong path), Load* functions will throw exception.
-    auto my_font = UI::LoadFont(context, "./res/roboto.ttf");
-    auto hp_texture = UI::LoadTexture(context, "./res/hp.png");
-    auto ap_texture = UI::LoadTexture(context, "./res/ap.png");
+    auto my_font = UI::LoadFont("./res/roboto.ttf");
+    auto hp_texture = UI::LoadTexture("./res/hp.png");
 
-    // Orbis uses Chaining to create UI Dermas and Widgets.
-    // If you think the code might get too long, you can make separate file to store all UIs
-    // in the same way described here.
-    auto example_frame = UI::CreateWidget<WidgetType::Panel>();
-    example_frame
-        // !! Drawings use local position of Widget !!
-        .DrawRect({380, 30}, {10, 10}, 1, sf::Color({0, 180, 255, 255}))
-        .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
-        .DrawRect({320, 32}, {55, 90}, 2, sf::Color({200, 200, 200, 255}))
-        .DrawRect({380, 180}, {10, 10}, 0, sf::Color({255, 255, 255, 255}))
-        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")
-        .DrawTexture({32, 32}, {15, 90}, 10, sf::Color::White, *ap_texture)
-        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *hp_texture);
+    // Orbis uses Dot Chaining to create UI Panels and Widgets.
+    // They are cached just like fonts/textures, and can be reused to multiple context.
+    // You can move these UI code into separated .cpp file if it gets too long.
+    auto widget_hud = UI::CreateWidget(WidgetType::Canvas);
+    auto widget_button_hp_up = UI::CreateWidget(WidgetType::Button);
+    auto widget_button_hp_down = UI::CreateWidget(WidgetType::Button);
+    auto widget_button_exit = UI::CreateWidget(WidgetType::Button);
 
-    auto example_button = UI::CreateWidget<WidgetType::Button>();
-    example_button
-        .SetSize({100, 50});
+    // Here, we first declare STATIC stuffs that doesn't change over time.
+    widget_hud
+        .SetSize({400, 250})
+        .SetPosition({0, 0})
+        .DrawRect({380, 180}, {0, 0}, 0, sf::Color({255, 255, 255, 255}))         // background
+        .DrawRect({380, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))            // upper strip
+        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")  // upper strip text
+        .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))        // HP bar background
+        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *hp_texture);      // HP bar icon
 
-    auto my_hud = UI::CreateDerma(context);
-    my_hud
-        .SetName("MyHUD")
-        .SetSize({400, 200})
-        .SetPosition({0, screen_size.y - 200})
-        // Be sure to set Z-Level for each Derma!
-        .SetZLevel(1)
-        .AddWidget(example_frame, {0, 0});
+    // things like HUD need to change dynamically as the game progresses.
+    // so we declare DYNAMIC stuffs that changes over time!
+    // be sure to use auto& instead of auto for dynamic parts.
+    auto& hud_hp_bar = widget_hud.DrawRect({310, 28}, {60, 52}, 3, sf::Color({227, 47, 92, 255}));
+    auto& hud_hp_text = widget_hud.DrawText(*my_font, 13, {65, 55}, 20, sf::Color::White, "");
 
-    auto my_window = UI::CreateDerma(context);
-    my_window
-        .SetName("MyWindow")
-        .SetSize({400, 400})
-        .SetPosition({100, 100})
-        .SetZLevel(10)
-        .AddWidget(example_button, {50, 50});
-
-    /*
-    auto& window_example1 = UI::CreateDerma<Window>();
-    window_example1.SetName("MyPanel1")
-        .SetSize({300, 300})
-        .SetPosition({200, 200})
-        .SetZLevel(10)
-        .SetOptions(DermaOption::Movable);
-
-    auto& window_example2 = UI::CreateDerma<Window>();
-    window_example2.SetName("MyPanel2")
-        .SetSize({300, 300})
-        .SetPosition({600, 200})
-        .SetZLevel(10)
-        .SetOptions(DermaOption::Default);
-
-    // notice that child of other widget uses CreateChild instead of Create function!
-    // for buttons to be usable, you can set Callbacks.
-    auto& button_health_up = UI::CreateChild<Button>(window_example1);
-    button_health_up.SetName("ButtonHealthUp")
-        .SetSize({50, 20})
-        // Child widgets follow z-level of parent widgets, so no need to set z-level unless you want to.
-        .SetPosition({10, 40})
+    widget_button_hp_up
+        .SetSize({100, 50})
+        .SetPosition({0, 0})
         .SetCallback([&player, &hp_anim]() {
             player.mHealthCurrent = std::min(player.mHealthMax, player.mHealthCurrent + 10);
             hp_anim.mIsAnimating = true;
@@ -115,10 +93,9 @@ int main() {
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
-    auto& button_health_down = UI::CreateChild<Button>(window_example1);
-    button_health_down.SetName("ButtonHealthDown")
-        .SetSize({50, 20})
-        .SetPosition({10, 80})
+    widget_button_hp_down
+        .SetSize({100, 50})
+        .SetPosition({0, 0})
         .SetCallback([&player, &hp_anim]() {
             player.mHealthCurrent = std::max(0, player.mHealthCurrent - 10);
             hp_anim.mIsAnimating = true;
@@ -127,39 +104,56 @@ int main() {
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
-    auto& button_armor_up = UI::CreateChild<Button>(window_example1);
-    button_armor_up.SetName("ButtonHealthUp")
-        .SetSize({50, 20})
-        .SetPosition({70, 40})
-        .SetCallback([&player, &ap_anim]() {
-            player.mArmorCurrent = std::min(player.mArmorMax, player.mArmorCurrent + 10);
-            ap_anim.mIsAnimating = true;
-            ap_anim.mStartTime = std::chrono::steady_clock::now();
-            ap_anim.mFrom = ap_anim.mCurrent;
-            ap_anim.mTo = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
+    widget_button_exit
+        .SetSize({50, 50})
+        .SetPosition({0, 0})
+        .SetCallback([]() {
+            // some code...
         });
 
-    auto& button_armor_down = UI::CreateChild<Button>(window_example1);
-    button_armor_down.SetName("ButtonHealthDown")
-        .SetSize({50, 20})
-        .SetPosition({70, 80})
-        .SetCallback([&player, &ap_anim]() {
-            player.mArmorCurrent = std::max(0, player.mArmorCurrent - 10);
-            ap_anim.mIsAnimating = true;
-            ap_anim.mStartTime = std::chrono::steady_clock::now();
-            ap_anim.mFrom = ap_anim.mCurrent;
-            ap_anim.mTo = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
-        });
-    */
+    // Now we create Panels which you can add widgets we created previously!
+    auto some_hud = UI::CreatePanel();
+    auto menu_window = UI::CreatePanel();
+    auto exit_window = UI::CreatePanel();
 
-    // for debugging purpose, you can list up dermas in console/terminal.
-    UI::ShowPanelList(context);
+    // you can register your panel to certain context, and you can stack Register() too!
+    some_hud
+        .SetName("SomeHUD")
+        .SetSize({400, 200})
+        .SetPosition({0, screen_size.y - 200})
+        .SetZLevel(1)
+        .AddWidget(widget_hud)
+        .Register(context);
+    // .Register(context2);
 
+    // you can add as many widgets as possible to a panel by using dot chaining!
+    menu_window
+        .SetName("MenuWindow")
+        .SetSize({400, 400})
+        .SetPosition({100, 100})
+        .SetZLevel(10)
+        .AddWidget(widget_button_hp_up)
+        .AddWidget(widget_button_hp_down)
+        .Register(context);
+
+    exit_window
+        .SetName("ExitWindow")
+        .SetSize({400, 250})
+        .SetPosition({200, 200})
+        .SetZLevel(1000)
+        .AddWidget(widget_button_exit)
+        .Register(context);
+
+    // for debugging purpose, you can list up panels in console/terminal.
+    UI::ShowPanelList();
+
+    // SFML Main Game Loop
     while (window.isOpen()) {
-        // be sure to update UI before while loop usually used in SFML examples.
-        // do NOT put it in event loop, Update itself has it's own loop for updating UI.
+        // Be sure to update the UI at the START of the game loop.
+        // NOTICE - UI::Update() and UI::Render() uses window, not a context!
         UI::Update(window);
 
+        // SFML Game Event Loop
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>() == true) {
                 window.close();
@@ -177,57 +171,15 @@ int main() {
                 hp_anim.mIsAnimating = false;
                 hp_anim.mCurrent = hp_anim.mTo;
             }
+
+            // dynamic elements can be updated IN the game loop!
+            hud_hp_bar.SetSize({310 * hp_anim.mCurrent, 28});
+            hud_hp_text.SetText(std::to_string(player.mHealthCurrent));
         }
 
-        if (ap_anim.mIsAnimating == true) {
-            ap_anim.mCurrent = Utils::SmoothLerp(ap_anim.mFrom, ap_anim.mTo, ap_anim.mStartTime, ap_anim.mDuration);
-
-            if (Utils::GetTimeFactor(ap_anim.mStartTime, ap_anim.mDuration) >= 1.0f) {
-                ap_anim.mIsAnimating = false;
-                ap_anim.mCurrent = ap_anim.mTo;
-            }
-        }
-
-        /*
-        sf::Vector2f window_size_current1 = window_example1.GetSize();
-        sf::Vector2f window_size_current2 = window_example2.GetSize();
-
-        // Dynamic drawings are drawings that can be modified at the middle of the game loop.
-        frame_example
-            .DrawRectDynamic("frame_health", {310 * hp_anim.mCurrent, 28}, {60, 52}, 2, sf::Color({227, 47, 92, 255}))
-            .DrawTextDynamic("frame_health_text", my_font, 13, {65, 55}, 20, sf::Color::White, std::to_string(player.mHealthCurrent))
-            .DrawRectDynamic("frame_armor", {310 * ap_anim.mCurrent, 28}, {60, 92}, 2, sf::Color({82, 175, 255, 255}))
-            .DrawTextDynamic("frame_armor_text", my_font, 13, {65, 95}, 20, sf::Color::White, std::to_string(player.mArmorCurrent));
-
-        window_example1
-            .DrawRectDynamic("window_bg1", window_size_current1, {0, 0}, 0, sf::Color::White)
-            .DrawRectDynamic("window_header1", {window_size_current1.x, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))
-            .DrawTextDynamic("window_title1", my_font, 15, {5, 5}, 20, sf::Color::White, "My Simple Window1");
-
-        window_example2
-            .DrawRectDynamic("window_bg2", window_size_current2, {0, 0}, 0, sf::Color::White)
-            .DrawRectDynamic("window_header2", {window_size_current2.x, 30}, {0, 0}, 1, sf::Color({255, 180, 0, 255}))
-            .DrawTextDynamic("window_title2", my_font, 15, {5, 5}, 20, sf::Color::White, "My Simple Window2");
-
-        button_health_up
-            .DrawRectDynamic("button_health_up", {50, 20}, {0, 0}, 10, sf::Color({180, 180, 180}))
-            .DrawTextDynamic("button_health_up_text", my_font, 13, {5, 3}, 20, sf::Color::White, "Up");
-
-        button_health_down
-            .DrawRectDynamic("button_health_down", {50, 20}, {0, 0}, 10, sf::Color(180, 180, 180))
-            .DrawTextDynamic("button_health_up_text", my_font, 13, {5, 3}, 20, sf::Color::White, "Down");
-
-        button_armor_up
-            .DrawRectDynamic("button_armor_up", {50, 20}, {0, 0}, 10, sf::Color({180, 180, 180}))
-            .DrawTextDynamic("button_health_up_text", my_font, 13, {5, 3}, 20, sf::Color::White, "Up");
-
-        button_armor_down
-            .DrawRectDynamic("button_armor_down", {50, 20}, {0, 0}, 10, sf::Color(180, 180, 180))
-            .DrawTextDynamic("button_health_up_text", my_font, 13, {5, 3}, 20, sf::Color::White, "Down");
-        */
+        // Be sure to call UI::Render() after cleaning up the window!
         window.clear();
 
-        // Be sure to call Render after cleaning up the window!
         UI::Render(window);
 
         window.display();
