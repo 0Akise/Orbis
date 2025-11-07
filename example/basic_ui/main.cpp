@@ -46,10 +46,8 @@ int main() {
     // Orbis provides some utility functions for UI making such as smooth lerp.
     Player player;
     AnimationState hp_anim;
-    AnimationState ap_anim;
 
     hp_anim.mCurrent = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
-    ap_anim.mCurrent = static_cast<float>(player.mArmorCurrent) / player.mArmorMax;
 
     // more game codes...
 
@@ -116,6 +114,7 @@ int main() {
     auto menu_window = UI::CreatePanel();
     auto exit_window = UI::CreatePanel();
 
+    // you can add as many widgets as possible to a panel by using dot chaining!
     // you can register your panel to certain context, and you can stack Register() too!
     some_hud
         .SetName("SomeHUD")
@@ -126,7 +125,6 @@ int main() {
         .Register(context);
     // .Register(context2);
 
-    // you can add as many widgets as possible to a panel by using dot chaining!
     menu_window
         .SetName("MenuWindow")
         .SetSize({400, 400})
