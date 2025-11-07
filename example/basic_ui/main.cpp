@@ -30,6 +30,7 @@ int main() {
     sf::Vector2f screen_size({1080, 720});
 
     // Create Game window and UI context. You can have multiple windows and contexts!
+    // Usually, you don't need more than one context even with multiple windows.
     sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Orbis Examples: Basics", sf::Style::Default);
     UIContext context;
 
@@ -53,34 +54,36 @@ int main() {
 
     // load your desired resources to UI cache so you can reuse them across different UI contexts.
     // If loading fails(such as wrong path), Load* functions will throw exception.
-    auto my_font = UI::LoadFont("./res/roboto.ttf");
-    auto hp_texture = UI::LoadTexture("./res/hp.png");
+    auto font_basic = UI::LoadFont("./res/roboto.ttf");
+    auto texture_hp = UI::LoadTexture("./res/hp.png");
+    auto texture_button = UI::LoadTexture("./res/button.png");
 
     // Orbis uses Dot Chaining to create UI Panels and Widgets.
     // They are cached just like fonts/textures, and can be reused to multiple context.
     // You can move these UI code into separated .cpp file if it gets too long.
-    auto widget_hud = UI::CreateWidget(WidgetType::Canvas);
-    auto widget_button_hp_up = UI::CreateWidget(WidgetType::Button);
-    auto widget_button_hp_down = UI::CreateWidget(WidgetType::Button);
-    auto widget_button_exit = UI::CreateWidget(WidgetType::Button);
+    auto canvas_hud = UI::CreateWidget(WidgetType::Canvas);
+    auto button_hp_up = UI::CreateWidget(WidgetType::Button);
+    auto button_hp_down = UI::CreateWidget(WidgetType::Button);
+    auto button_exit = UI::CreateWidget(WidgetType::Button);
+    auto button_styled = UI::CreateWidget(WidgetType::Button);
 
     // Here, we first declare STATIC stuffs that doesn't change over time.
-    widget_hud
+    canvas_hud
         .SetSize({400, 250})
         .SetPosition({0, 0})
-        .DrawRect({380, 180}, {0, 0}, 0, sf::Color({255, 255, 255, 255}))         // background
-        .DrawRect({380, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))            // upper strip
-        .DrawText(*my_font, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")  // upper strip text
-        .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))        // HP bar background
-        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *hp_texture);      // HP bar icon
+        .DrawRect({380, 180}, {0, 0}, 0, sf::Color({255, 255, 255, 255}))            // background
+        .DrawRect({380, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))               // upper strip
+        .DrawText(*font_basic, 15, {15, 15}, 20, sf::Color::White, "My Simple HUD")  // upper strip text
+        .DrawRect({320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))           // HP bar background
+        .DrawTexture({32, 32}, {15, 50}, 10, sf::Color::White, *texture_hp);         // HP bar icon
 
     // things like HUD need to change dynamically as the game progresses.
     // so we declare DYNAMIC stuffs that changes over time!
     // be sure to use auto& instead of auto for dynamic parts.
-    auto& hud_hp_bar = widget_hud.DrawRect({310, 28}, {60, 52}, 3, sf::Color({227, 47, 92, 255}));
-    auto& hud_hp_text = widget_hud.DrawText(*my_font, 13, {65, 55}, 20, sf::Color::White, "");
+    auto& hud_hp_bar = canvas_hud.DrawRect({310, 28}, {60, 52}, 3, sf::Color({227, 47, 92, 255}));
+    auto& hud_hp_text = canvas_hud.DrawText(*font_basic, 13, {65, 55}, 20, sf::Color::White, "");
 
-    widget_button_hp_up
+    button_hp_up
         .SetSize({100, 50})
         .SetPosition({0, 0})
         .SetCallback([&player, &hp_anim]() {
@@ -91,7 +94,7 @@ int main() {
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
-    widget_button_hp_down
+    button_hp_down
         .SetSize({100, 50})
         .SetPosition({0, 0})
         .SetCallback([&player, &hp_anim]() {
@@ -102,44 +105,60 @@ int main() {
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax;
         });
 
-    widget_button_exit
+    button_exit
         .SetSize({50, 50})
         .SetPosition({0, 0})
         .SetCallback([]() {
             // some code...
         });
 
+    // If you want templated widget with styles applied, you can!
+    // All you need to do is to set Size and how it looks like, set other properties later.
+    button_styled
+        .SetSize({200, 100})
+        .DrawTexture({200, 100}, {0, 0}, 0, sf::Color::White, *texture_button);  // background image
+
     // Now we create Panels which you can add widgets we created previously!
-    auto some_hud = UI::CreatePanel();
-    auto menu_window = UI::CreatePanel();
-    auto exit_window = UI::CreatePanel();
+    auto panel_hud = UI::CreatePanel();
+    auto panel_menu = UI::CreatePanel();
+    auto panel_exit = UI::CreatePanel();
 
     // you can add as many widgets as possible to a panel by using dot chaining!
     // you can register your panel to certain context, and you can stack Register() too!
-    some_hud
+    panel_hud
         .SetName("SomeHUD")
         .SetSize({400, 200})
         .SetPosition({0, screen_size.y - 200})
         .SetZLevel(1)
-        .AddWidget(widget_hud)
+        .AddWidget(canvas_hud)
         .Register(context);
     // .Register(context2);
 
-    menu_window
+    panel_menu
         .SetName("MenuWindow")
         .SetSize({400, 400})
         .SetPosition({100, 100})
         .SetZLevel(10)
-        .AddWidget(widget_button_hp_up)
-        .AddWidget(widget_button_hp_down)
+        .AddWidget(button_hp_up)
+        .AddWidget(button_hp_down)
+        .AddWidget(button_styled
+                       .Clone()  // Clone to make a button independent!
+                       .SetPosition({10, 200})
+                       .DrawText(*font_basic, 15, {15, 15}, 20, sf::Color::White, "AAA")
+                       .SetCallback([]() { /* Some callback */ }))
+        .AddWidget(button_styled
+                       .Clone()
+                       .SetPosition({10, 500})
+                       .DrawText(*font_basic, 15, {15, 15}, 20, sf::Color::White, "BBB")
+                       .SetCallback([]() { /* Some callback */ }))
         .Register(context);
 
-    exit_window
+    panel_exit
         .SetName("ExitWindow")
         .SetSize({400, 250})
         .SetPosition({200, 200})
         .SetZLevel(1000)
-        .AddWidget(widget_button_exit)
+        .AddWidget(button_exit)
         .Register(context);
 
     // for debugging purpose, you can list up panels in console/terminal.
