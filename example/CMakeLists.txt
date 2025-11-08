@@ -1,3 +1,3 @@
 cmake_minimum_required(VERSION 3.28)
 
-add_subdirectory(basic_ui)
+add_subdirectory(basics)

@@ -24,153 +24,8 @@ namespace Orbis {
         Pressed,
     };
 
-    class UIContext {
-    private:
-        Controls      mControls;
-        ResourceVault mResourceVault;
-
-        std::vector<std::shared_ptr<Panel>> mPanels;
-
-    public:
-        UIContext() = default;
-
-        ResourceVault& GetResourceVault() {
-            return mResourceVault;
-        }
-
-        void ShowPanelList() const {
-            std::cout << "UI Panels Listing\n";
-            std::cout << "=====================\n";
-
-            for (const auto& panel : mPanels) {
-                std::cout << "Name: " << panel->GetName()
-                          << "\tZ-Level: " << panel->GetZLevel() << "\n";
-            }
-
-            std::cout << std::endl;
-        }
-
-        void AddPanel(std::shared_ptr<Panel> panel) {
-            mPanels.push_back(panel);
-        }
-
-        void Update(const Controls& controls) {
-            mControls = controls;
-
-            for (auto& panel : mPanels) {
-                panel->Update(mControls);
-            }
-        }
-
-        void Render(sf::RenderWindow& window) {
-            for (auto& panel : mPanels) {
-                panel->Render(window);
-            }
-        }
-    };
-
-    class UI {
-    private:
-        ResourceVault                                     mResourceVault;
-        std::unordered_map<sf::RenderWindow*, UIContext*> mWindowToContext;
-
-        static UI& GetInstance() {
-            static UI instance;
-
-            return instance;
-        }
-
-        UI() = default;
-
-    public:
-        UI(const UI&)            = delete;
-        UI& operator=(const UI&) = delete;
-
-        static void Initialize() {
-            GetInstance();
-        }
-
-        static UIContext CreateContext() {
-            return UIContext();
-        }
-
-        static void Bind(sf::RenderWindow& window, UIContext& context) {
-            GetInstance().mWindowToContext[&window] = &context;
-        }
-
-        static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
-            return GetInstance().mResourceVault.LoadFont(path);
-        }
-
-        static std::shared_ptr<sf::Texture> LoadTexture(
-            const std::string& path,
-            bool               srgb_enabled = false,
-            const sf::IntRect& area         = sf::IntRect()) {
-            return GetInstance().mResourceVault.LoadTexture(path, srgb_enabled, area);
-        }
-
-        static Panel CreatePanel() {
-            return Panel();
-        }
-
-        static Canvas CreateWidget(WidgetType wtype) {
-            switch (wtype) {
-                case WidgetType::Canvas:
-                    return Canvas();
-
-                case WidgetType::Button:
-                    throw std::runtime_error("Button widget not yet implemented");
-
-                default:
-                    throw std::runtime_error("Unknown widget type");
-            }
-        }
-
-        static void ShowPanelList(sf::RenderWindow& window) {
-            auto& instance = GetInstance();
-            auto  iter     = instance.mWindowToContext.find(&window);
-
-            if (iter == instance.mWindowToContext.end()) {
-                throw std::runtime_error("Window not bound to any UIContext");
-            }
-
-            UIContext* context = iter->second;
-
-            context->ShowPanelList();
-        }
-
-        static void Update(sf::RenderWindow& window) {
-            auto& instance = GetInstance();
-            auto  iter     = instance.mWindowToContext.find(&window);
-
-            if (iter == instance.mWindowToContext.end()) {
-                throw std::runtime_error("Window not bound to any UIContext");
-            }
-
-            UIContext* context = iter->second;
-
-            Controls controls;
-            controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
-            controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
-            controls.mMouse.mLPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-            controls.mMouse.mRPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
-            controls.mMouse.mWPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
-
-            context->Update(controls);
-        }
-
-        static void Render(sf::RenderWindow& window) {
-            auto& instance = GetInstance();
-            auto  iter     = instance.mWindowToContext.find(&window);
-
-            if (iter == instance.mWindowToContext.end()) {
-                throw std::runtime_error("Window not bound to any UIContext");
-            }
-
-            UIContext* context = iter->second;
-            context->Render(window);
-        }
-    };
+    class UIContext;
+    class UI;
 
     class Widget : public std::enable_shared_from_this<Widget> {
     protected:
@@ -580,6 +435,154 @@ namespace Orbis {
             for (auto& widget : mWidgets) {
                 widget->Render(window, mPosition);
             }
+        }
+    };
+
+    class UIContext {
+    private:
+        Controls      mControls;
+        ResourceVault mResourceVault;
+
+        std::vector<std::shared_ptr<Panel>> mPanels;
+
+    public:
+        UIContext() = default;
+
+        ResourceVault& GetResourceVault() {
+            return mResourceVault;
+        }
+
+        void ShowPanelList() const {
+            std::cout << "UI Panels Listing\n";
+            std::cout << "=====================\n";
+
+            for (const auto& panel : mPanels) {
+                std::cout << "Name: " << panel->GetName()
+                          << "\tZ-Level: " << panel->GetZLevel() << "\n";
+            }
+
+            std::cout << std::endl;
+        }
+
+        void AddPanel(std::shared_ptr<Panel> panel) {
+            mPanels.push_back(panel);
+        }
+
+        void Update(const Controls& controls) {
+            mControls = controls;
+
+            for (auto& panel : mPanels) {
+                panel->Update(mControls);
+            }
+        }
+
+        void Render(sf::RenderWindow& window) {
+            for (auto& panel : mPanels) {
+                panel->Render(window);
+            }
+        }
+    };
+
+    class UI {
+    private:
+        ResourceVault                                     mResourceVault;
+        std::unordered_map<sf::RenderWindow*, UIContext*> mWindowToContext;
+
+        static UI& GetInstance() {
+            static UI instance;
+
+            return instance;
+        }
+
+        UI() = default;
+
+    public:
+        UI(const UI&)            = delete;
+        UI& operator=(const UI&) = delete;
+
+        static void Initialize() {
+            GetInstance();
+        }
+
+        static UIContext CreateContext() {
+            return UIContext();
+        }
+
+        static void Bind(sf::RenderWindow& window, UIContext& context) {
+            GetInstance().mWindowToContext[&window] = &context;
+        }
+
+        static std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
+            return GetInstance().mResourceVault.LoadFont(path);
+        }
+
+        static std::shared_ptr<sf::Texture> LoadTexture(
+            const std::string& path,
+            bool               srgb_enabled = false,
+            const sf::IntRect& area         = sf::IntRect()) {
+            return GetInstance().mResourceVault.LoadTexture(path, srgb_enabled, area);
+        }
+
+        static Panel CreatePanel() {
+            return Panel();
+        }
+
+        static Canvas CreateWidget(WidgetType wtype) {
+            switch (wtype) {
+                case WidgetType::Canvas:
+                    return Canvas();
+
+                case WidgetType::Button:
+                    throw std::runtime_error("Button widget not yet implemented");
+
+                default:
+                    throw std::runtime_error("Unknown widget type");
+            }
+        }
+
+        static void ShowPanelList(sf::RenderWindow& window) {
+            auto& instance = GetInstance();
+            auto  iter     = instance.mWindowToContext.find(&window);
+
+            if (iter == instance.mWindowToContext.end()) {
+                throw std::runtime_error("Window not bound to any UIContext");
+            }
+
+            UIContext* context = iter->second;
+
+            context->ShowPanelList();
+        }
+
+        static void Update(sf::RenderWindow& window) {
+            auto& instance = GetInstance();
+            auto  iter     = instance.mWindowToContext.find(&window);
+
+            if (iter == instance.mWindowToContext.end()) {
+                throw std::runtime_error("Window not bound to any UIContext");
+            }
+
+            UIContext* context = iter->second;
+
+            Controls controls;
+            controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
+            controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
+            controls.mMouse.mLPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            controls.mMouse.mRPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
+            controls.mMouse.mWPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+
+            context->Update(controls);
+        }
+
+        static void Render(sf::RenderWindow& window) {
+            auto& instance = GetInstance();
+            auto  iter     = instance.mWindowToContext.find(&window);
+
+            if (iter == instance.mWindowToContext.end()) {
+                throw std::runtime_error("Window not bound to any UIContext");
+            }
+
+            UIContext* context = iter->second;
+            context->Render(window);
         }
     };
 } // namespace Orbis

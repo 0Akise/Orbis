@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include <Orbis/UI.hpp>
+#include <Orbis/UINew.hpp>
 #include <Orbis/Utils.hpp>
 
 using namespace Orbis;
@@ -41,7 +41,7 @@ int main() {
     UI::Bind(window, context);
 
     // Settings for SFML game window
-    window.setFramerateLimit(120);
+    window.setFramerateLimit(75);
     window.setVerticalSyncEnabled(false);
 
     // Some game code you desire. this is an example.
