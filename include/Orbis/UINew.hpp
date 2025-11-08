@@ -24,26 +24,33 @@ namespace Orbis {
         Pressed,
     };
 
+    class Widget;
+    class Canvas;
+    template <typename WT>
+    class WidgetHandle;
+    class Panel;
     class UIContext;
     class UI;
+} // namespace Orbis
 
+namespace Orbis {
     class Widget : public std::enable_shared_from_this<Widget> {
     protected:
         sf::Vector2f mSize      = {0, 0};
         sf::Vector2f mPosition  = {0, 0};
         bool         mIsVisible = true;
 
-        std::map<std::string, std::shared_ptr<DrawingsRect>>    mDrawingRects;
-        std::map<std::string, std::shared_ptr<DrawingsText>>    mDrawingTexts;
-        std::map<std::string, std::shared_ptr<DrawingsTexture>> mDrawingTextures;
+        std::map<std::string, std::shared_ptr<DrawingsRect>>    mDrawingsRect;
+        std::map<std::string, std::shared_ptr<DrawingsText>>    mDrawingsText;
+        std::map<std::string, std::shared_ptr<DrawingsTexture>> mDrawingsTexture;
 
     public:
         virtual ~Widget() = default;
 
         DrawingsRect& GetRect(const std::string& id) {
-            auto iter = mDrawingRects.find(id);
+            auto iter = mDrawingsRect.find(id);
 
-            if (iter == mDrawingRects.end()) {
+            if (iter == mDrawingsRect.end()) {
                 throw std::runtime_error("DrawingsRect with id '" + id + "' not found");
             }
 
@@ -51,9 +58,9 @@ namespace Orbis {
         }
 
         DrawingsText& GetText(const std::string& id) {
-            auto iter = mDrawingTexts.find(id);
+            auto iter = mDrawingsText.find(id);
 
-            if (iter == mDrawingTexts.end()) {
+            if (iter == mDrawingsText.end()) {
                 throw std::runtime_error("DrawingsText with id '" + id + "' not found");
             }
 
@@ -61,9 +68,9 @@ namespace Orbis {
         }
 
         DrawingsTexture& GetTexture(const std::string& id) {
-            auto iter = mDrawingTextures.find(id);
+            auto iter = mDrawingsTexture.find(id);
 
-            if (iter == mDrawingTextures.end()) {
+            if (iter == mDrawingsTexture.end()) {
                 throw std::runtime_error("DrawingsTexture with id '" + id + "' not found");
             }
 
@@ -125,7 +132,7 @@ namespace Orbis {
             drawing->mIsRounded        = is_rounded;
             drawing->mRoundingRadius   = rounding_radius;
 
-            mDrawingRects[id] = drawing;
+            mDrawingsRect[id] = drawing;
 
             return *this;
         }
@@ -149,7 +156,7 @@ namespace Orbis {
             drawing->mFillColor = fill_color;
             drawing->mText      = text;
 
-            mDrawingTexts[id] = drawing;
+            mDrawingsText[id] = drawing;
 
             return *this;
         }
@@ -173,7 +180,7 @@ namespace Orbis {
             drawing->mFillColor        = fill_color;
             drawing->mTextureSmoothing = smoothing_enabled;
 
-            mDrawingTextures[id] = drawing;
+            mDrawingsTexture[id] = drawing;
 
             return *this;
         }
@@ -255,16 +262,19 @@ namespace Orbis {
                 return;
             }
 
-            sf::Vector2f                                              pos_global = pos_panel + mPosition;
+            sf::Vector2f pos_global = pos_panel + mPosition;
+
             std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
 
-            for (const auto& [id, drawing] : mDrawingRects) {
+            for (const auto& [id, drawing] : mDrawingsRect) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
-            for (const auto& [id, drawing] : mDrawingTexts) {
+
+            for (const auto& [id, drawing] : mDrawingsText) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
-            for (const auto& [id, drawing] : mDrawingTextures) {
+
+            for (const auto& [id, drawing] : mDrawingsTexture) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
 
@@ -275,74 +285,6 @@ namespace Orbis {
             for (const auto& [zlevel, drawing] : all_drawings) {
                 RenderDrawing(window, drawing, pos_global);
             }
-        }
-    };
-
-    class WidgetHandle {
-    private:
-        std::shared_ptr<Widget> mWidget;
-
-    public:
-        WidgetHandle(std::shared_ptr<Widget> widget) : mWidget(widget) {
-        }
-
-        std::shared_ptr<Widget> GetShared() const {
-            return mWidget;
-        }
-
-        DrawingsRect& GetRect(const std::string& id) {
-            return mWidget->GetRect(id);
-        }
-
-        WidgetHandle& SetSize(sf::Vector2f size) {
-            mWidget->SetSize(size);
-
-            return *this;
-        }
-
-        WidgetHandle& SetPosition(sf::Vector2f position) {
-            mWidget->SetPosition(position);
-
-            return *this;
-        }
-
-        WidgetHandle& DrawRect(const std::string& id,
-                               sf::Vector2f       size,
-                               sf::Vector2f       position,
-                               size_t             zlevel,
-                               sf::Color          fill_color,
-                               bool               is_outlined       = false,
-                               float              outline_thickness = 0.0f,
-                               sf::Color          outline_color     = sf::Color::Black,
-                               bool               is_rounded        = false,
-                               float              rounding_radius   = 0.0f) {
-            mWidget->DrawRect(id, size, position, zlevel, fill_color, is_outlined, outline_thickness, outline_color, is_rounded, rounding_radius);
-
-            return *this;
-        }
-
-        WidgetHandle& DrawText(const std::string&        id,
-                               std::shared_ptr<sf::Font> font,
-                               size_t                    font_size,
-                               sf::Vector2f              position,
-                               size_t                    zlevel,
-                               sf::Color                 fill_color,
-                               const std::string&        text = "") {
-            mWidget->DrawText(id, font, font_size, position, zlevel, fill_color, text);
-
-            return *this;
-        }
-
-        WidgetHandle& DrawTexture(const std::string&           id,
-                                  std::shared_ptr<sf::Texture> texture,
-                                  sf::Vector2f                 size,
-                                  sf::Vector2f                 position,
-                                  size_t                       zlevel,
-                                  sf::Color                    fill_color,
-                                  bool                         smoothing_enabled = true) {
-            mWidget->DrawTexture(id, texture, size, position, zlevel, fill_color, smoothing_enabled);
-
-            return *this;
         }
     };
 
@@ -405,17 +347,13 @@ namespace Orbis {
             return *this;
         }
 
-        Panel& AddWidget(Widget& widget) {
-            mWidgets.push_back(widget.shared_from_this());
+        Panel& AddWidget(std::shared_ptr<Widget> widget) {
+            mWidgets.push_back(widget);
 
             return *this;
         }
 
-        inline Panel& Register(UIContext& context) {
-            context.AddPanel(shared_from_this());
-
-            return *this;
-        }
+        Panel& Register(UIContext& context);
 
         void Update(const Controls& controls) {
             if (mIsVisible == false) {
@@ -436,6 +374,140 @@ namespace Orbis {
                 widget->Render(window, mPosition);
             }
         }
+    };
+} // namespace Orbis
+
+namespace Orbis {
+    template <typename WT>
+    class WidgetHandle {
+    private:
+        std::shared_ptr<WT> mWidget;
+
+    public:
+        WidgetHandle(std::shared_ptr<WT> widget) : mWidget(widget) {};
+
+        std::shared_ptr<Widget> GetShared() const {
+            return std::static_pointer_cast<Widget>(mWidget);
+        }
+
+        DrawingsRect& GetRect(const std::string& id) {
+            return mWidget->GetRect(id);
+        }
+
+        DrawingsText& GetText(const std::string& id) {
+            return mWidget->GetText(id);
+        }
+
+        DrawingsTexture& GetTexture(const std::string& id) {
+            return mWidget->GetTexture(id);
+        }
+
+        WidgetHandle& SetSize(sf::Vector2f size) {
+            mWidget->SetSize(size);
+
+            return *this;
+        }
+
+        WidgetHandle& SetPosition(sf::Vector2f position) {
+            mWidget->SetPosition(position);
+
+            return *this;
+        }
+
+        WidgetHandle& SetVisible(bool visible) {
+            mWidget->SetVisible(visible);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawRect(const std::string& id,
+                               sf::Vector2f       size,
+                               sf::Vector2f       position,
+                               size_t             zlevel,
+                               sf::Color          fill_color,
+                               bool               is_outlined       = false,
+                               float              outline_thickness = 0.0f,
+                               sf::Color          outline_color     = sf::Color::Black,
+                               bool               is_rounded        = false,
+                               float              rounding_radius   = 0.0f) {
+            mWidget->DrawRect(id, size, position, zlevel, fill_color, is_outlined, outline_thickness, outline_color, is_rounded, rounding_radius);
+
+            return *this;
+        };
+        WidgetHandle& DrawText(const std::string&        id,
+                               std::shared_ptr<sf::Font> font,
+                               size_t                    font_size,
+                               sf::Vector2f              position,
+                               size_t                    zlevel,
+                               sf::Color                 fill_color,
+                               const std::string&        text = "") {
+            mWidget->DrawText(id, font, font_size, position, zlevel, fill_color, text);
+
+            return *this;
+        };
+
+        WidgetHandle& DrawTexture(const std::string&           id,
+                                  std::shared_ptr<sf::Texture> texture,
+                                  sf::Vector2f                 size,
+                                  sf::Vector2f                 position,
+                                  size_t                       zlevel,
+                                  sf::Color                    fill_color,
+                                  bool                         smoothing_enabled = true) {
+            mWidget->DrawTexture(id, texture, size, position, zlevel, fill_color, smoothing_enabled);
+
+            return *this;
+        };
+    };
+
+    class PanelHandle {
+    private:
+        std::shared_ptr<Panel> mPanel;
+
+    public:
+        PanelHandle(std::shared_ptr<Panel> panel) : mPanel(panel) {};
+
+        std::shared_ptr<Panel> GetShared() const {
+            return mPanel;
+        }
+
+        PanelHandle& SetName(const std::string& name) {
+            mPanel->SetName(name);
+
+            return *this;
+        }
+
+        PanelHandle& SetSize(sf::Vector2f size) {
+            mPanel->SetSize(size);
+
+            return *this;
+        }
+
+        PanelHandle& SetPosition(sf::Vector2f position) {
+            mPanel->SetPosition(position);
+
+            return *this;
+        }
+
+        PanelHandle& SetZLevel(size_t zlevel) {
+            mPanel->SetZLevel(zlevel);
+
+            return *this;
+        }
+
+        PanelHandle& SetVisible(bool visible) {
+            mPanel->SetVisible(visible);
+
+            return *this;
+        }
+
+        template <typename WT>
+        PanelHandle& AddWidget(const WidgetHandle<WT>& widget_handle) {
+            mPanel->AddWidget(widget_handle.GetShared());
+
+            return *this;
+        }
+
+        PanelHandle& Register(UIContext& context);
     };
 
     class UIContext {
@@ -504,10 +576,6 @@ namespace Orbis {
             GetInstance();
         }
 
-        static UIContext CreateContext() {
-            return UIContext();
-        }
-
         static void Bind(sf::RenderWindow& window, UIContext& context) {
             GetInstance().mWindowToContext[&window] = &context;
         }
@@ -523,14 +591,18 @@ namespace Orbis {
             return GetInstance().mResourceVault.LoadTexture(path, srgb_enabled, area);
         }
 
-        static Panel CreatePanel() {
-            return Panel();
+        static UIContext CreateContext() {
+            return UIContext();
         }
 
-        static Canvas CreateWidget(WidgetType wtype) {
+        static PanelHandle CreatePanel() {
+            return PanelHandle(std::make_shared<Panel>());
+        }
+
+        static WidgetHandle<Canvas> CreateWidget(WidgetType wtype) {
             switch (wtype) {
                 case WidgetType::Canvas:
-                    return Canvas();
+                    return WidgetHandle<Canvas>(std::make_shared<Canvas>());
 
                 case WidgetType::Button:
                     throw std::runtime_error("Button widget not yet implemented");
@@ -585,4 +657,16 @@ namespace Orbis {
             context->Render(window);
         }
     };
+
+    inline Panel& Panel::Register(UIContext& context) {
+        context.AddPanel(shared_from_this());
+
+        return *this;
+    }
+
+    inline PanelHandle& PanelHandle::Register(UIContext& context) {
+        mPanel->Register(context);
+
+        return *this;
+    }
 } // namespace Orbis
