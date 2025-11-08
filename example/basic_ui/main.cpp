@@ -62,8 +62,8 @@ int main() {
     // Orbis uses Dot Chaining to create UI Panels and Widgets.
     // They are cached just like fonts/textures, and can be reused to multiple context.
     // You can move these UI code into separated .cpp file if it gets too long.
-    auto canvas_hud     = UI::CreateWidget(WidgetType::Canvas); // returns Canvas&
-    auto button_hp_up   = UI::CreateWidget(WidgetType::Button); // returns Button&
+    auto canvas_hud     = UI::CreateWidget(WidgetType::Canvas);
+    auto button_hp_up   = UI::CreateWidget(WidgetType::Button);
     auto button_hp_down = UI::CreateWidget(WidgetType::Button);
     auto button_exit    = UI::CreateWidget(WidgetType::Button);
     auto button_styled  = UI::CreateWidget(WidgetType::Button);
