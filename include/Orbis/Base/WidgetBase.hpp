@@ -9,8 +9,8 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
-#include "Orbis/Base/Drawing.hpp"
 #include "Orbis/Base/WidgetInterface.hpp"
+#include "Orbis/System/Drawing.hpp"
 
 namespace Orbis {
     template <typename Derived>
@@ -21,7 +21,7 @@ namespace Orbis {
         sf::Vector2f mPositionOffset = {0, 0};
         size_t mZLevel = 0;
 
-        std::multimap<size_t, std::shared_ptr<Drawing>> mDrawings;
+        std::multimap<size_t, std::shared_ptr<Drawings>> mDrawings;
 
         bool mIsVisible = true;
         bool mIsInBounds = false;
@@ -107,12 +107,12 @@ namespace Orbis {
             }
         }
 
-        void ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<Drawing>& drawing, const sf::Vector2f& pos_global) {
+        void ProcessDrawings(sf::RenderWindow& window, const std::shared_ptr<Drawings>& drawing, const sf::Vector2f& pos_global) {
             sf::Vector2f pos_drawing = pos_global + drawing->mPosition;
 
             switch (drawing->mType) {
                 case DrawingType::Rect: {
-                    auto drawing_rect = std::static_pointer_cast<DrawingRect>(drawing);
+                    auto drawing_rect = std::static_pointer_cast<DrawingsRect>(drawing);
 
                     if (drawing_rect->mIsRounded == true) {
                         break;
@@ -134,7 +134,7 @@ namespace Orbis {
                 }
 
                 case DrawingType::Text: {
-                    auto drawing_text = std::static_pointer_cast<DrawingText>(drawing);
+                    auto drawing_text = std::static_pointer_cast<DrawingsText>(drawing);
                     sf::Text text(drawing_text->mFont, drawing_text->mText, drawing_text->mFontSize);
 
                     text.setPosition(pos_drawing);
@@ -145,7 +145,7 @@ namespace Orbis {
                 }
 
                 case DrawingType::Texture: {
-                    auto drawing_texture = std::static_pointer_cast<DrawingTexture>(drawing);
+                    auto drawing_texture = std::static_pointer_cast<DrawingsTexture>(drawing);
 
                     sf::RectangleShape shape(drawing_texture->mSize);
 
@@ -174,7 +174,7 @@ namespace Orbis {
             sf::Color outline_color = sf::Color::Black,
             bool is_rounded = false,
             float rounding_radius = 0.0f) {
-            auto drawing = std::make_shared<DrawingRect>();
+            auto drawing = std::make_shared<DrawingsRect>();
 
             drawing->mType = DrawingType::Rect;
             drawing->mID = "";
@@ -205,7 +205,7 @@ namespace Orbis {
             float rounding_radius = 0.0f) {
             ClearDrawing(id);
 
-            auto drawing = std::make_shared<DrawingRect>();
+            auto drawing = std::make_shared<DrawingsRect>();
 
             drawing->mType = DrawingType::Rect;
             drawing->mID = std::move(id);
@@ -230,7 +230,7 @@ namespace Orbis {
             size_t zlevel,
             sf::Color fill_color,
             const std::string& text = "") {
-            auto drawing = std::make_shared<DrawingText>();
+            auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType = DrawingType::Text;
             drawing->mID = "";
@@ -255,7 +255,7 @@ namespace Orbis {
             const std::string& text = "") {
             ClearDrawing(id);
 
-            auto drawing = std::make_shared<DrawingText>();
+            auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType = DrawingType::Text;
             drawing->mID = std::move(id);
@@ -277,7 +277,7 @@ namespace Orbis {
             sf::Color fill_color,
             sf::Texture texture,
             bool smoothing_enabled = true) {
-            auto drawing = std::make_shared<DrawingTexture>();
+            auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType = DrawingType::Texture;
             drawing->mID = "";
@@ -302,7 +302,7 @@ namespace Orbis {
             bool smoothing_enabled = true) {
             ClearDrawing(id);
 
-            auto drawing = std::make_shared<DrawingTexture>();
+            auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType = DrawingType::Texture;
             drawing->mID = std::move(id);
@@ -322,7 +322,7 @@ namespace Orbis {
                 return self();
             }
 
-            std::vector<std::multimap<size_t, std::shared_ptr<Drawing>>::iterator> to_erase;
+            std::vector<std::multimap<size_t, std::shared_ptr<Drawings>>::iterator> to_erase;
 
             for (auto iter = mDrawings.begin(); iter != mDrawings.end(); ++iter) {
                 if (iter->second->mID == id) {

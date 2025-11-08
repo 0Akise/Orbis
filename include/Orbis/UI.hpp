@@ -15,15 +15,15 @@
 namespace Orbis {
     class UIContext {
     private:
-        Controls mControls;
+        Controls      mControls;
         ResourceVault mResourceVault;
 
-        std::vector<std::shared_ptr<Panel>> mPanels;
+        std::vector<std::shared_ptr<Panel>>           mPanels;
         std::vector<std::shared_ptr<WidgetInterface>> mWidgets;
-        size_t mPanelIDs = 0;
+        size_t                                        mPanelIDs = 0;
 
         std::weak_ptr<Panel> mSelectedPanel;
-        bool mZLevelIsDirty = false;
+        bool                 mZLevelIsDirty = false;
 
     public:
         ResourceVault& AccessResourceVault() {
@@ -95,9 +95,9 @@ namespace Orbis {
         void Update(sf::RenderWindow& window) {
             mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
             mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
-            mControls.mMouse.mLPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-            mControls.mMouse.mRPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
-            mControls.mMouse.mWPress = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+            mControls.mMouse.mLPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            mControls.mMouse.mRPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
+            mControls.mMouse.mWPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
 
             for (auto& panel : mPanels) {
                 panel->Update(mControls);
@@ -168,7 +168,8 @@ namespace Orbis {
                 auto widget = std::make_shared<Panel>();
 
                 return WidgetHandle<Panel>(widget);
-            } else if constexpr (Type == WidgetType::Button) {
+            }
+            else if constexpr (Type == WidgetType::Button) {
                 auto widget = std::make_shared<Button>();
 
                 return WidgetHandle<Button>(widget);
@@ -180,10 +181,10 @@ namespace Orbis {
         }
 
         static inline std::shared_ptr<sf::Texture> LoadTexture(
-            UIContext& context,
+            UIContext&         context,
             const std::string& path,
-            bool srgb_enabled = false,
-            const sf::IntRect& area = sf::IntRect()) {
+            bool               srgb_enabled = false,
+            const sf::IntRect& area         = sf::IntRect()) {
             return context.AccessResourceVault().LoadTexture(path, srgb_enabled, area);
         }
 
@@ -203,4 +204,4 @@ namespace Orbis {
             UIManager::Get().GetContext(window)->Render(window);
         }
     };
-}
+} // namespace Orbis

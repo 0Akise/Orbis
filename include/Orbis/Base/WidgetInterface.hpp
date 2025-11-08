@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "SFML/Graphics.hpp"
+#include <SFML/Graphics.hpp>
 
 #include "Orbis/System/Controls.hpp"
 

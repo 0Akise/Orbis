@@ -4,9 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include "Orbis/Base/Drawing.hpp"
 #include "Orbis/Base/PanelEvent.hpp"
 #include "Orbis/Base/WidgetInterface.hpp"
+#include "Orbis/System/Drawing.hpp"
 
 namespace Orbis {
     enum class PanelOption : uint32_t {
@@ -43,7 +43,7 @@ namespace Orbis {
         bool mIsResizing = false;
 
         std::multimap<size_t, std::shared_ptr<WidgetInterface>> mWidgets;
-        std::multimap<size_t, std::shared_ptr<Drawing>> mDrawings;
+        std::multimap<size_t, std::shared_ptr<Drawings>> mDrawings;
 
         bool mIsInBounds = false;
         Controls mControlsPrevious;
