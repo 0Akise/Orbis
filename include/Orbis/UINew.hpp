@@ -26,9 +26,12 @@ namespace Orbis {
 
     class Widget;
     class Canvas;
+    class Button;
+    class Panel;
+
     template <typename WT>
     class WidgetHandle;
-    class Panel;
+    class PanelHandle;
     class UIContext;
     class UI;
 } // namespace Orbis
@@ -38,6 +41,7 @@ namespace Orbis {
     protected:
         sf::Vector2f mSize      = {0, 0};
         sf::Vector2f mPosition  = {0, 0};
+        size_t       mZLevel    = 0;
         bool         mIsVisible = true;
 
         std::map<std::string, std::shared_ptr<DrawingsRect>>    mDrawingsRect;
@@ -85,7 +89,11 @@ namespace Orbis {
             return mSize;
         }
 
-        bool IsVisible() const {
+        size_t GetZLevel() const {
+            return mZLevel;
+        }
+
+        bool GetVisibility() const {
             return mIsVisible;
         }
 
@@ -101,7 +109,13 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& SetVisible(bool visible) {
+        Widget& SetZLevel(size_t zlevel) {
+            mZLevel = zlevel;
+
+            return *this;
+        }
+
+        Widget& SetVisibility(bool visible) {
             mIsVisible = visible;
 
             return *this;
@@ -197,8 +211,7 @@ namespace Orbis {
             sf::Vector2f pos_drawing = pos_widget + (drawing->mPosition);
 
             switch (drawing->mType) {
-                case DrawingType::Rect:
-                {
+                case DrawingType::Rect: {
                     auto               rect = std::static_pointer_cast<DrawingsRect>(drawing);
                     sf::RectangleShape shape(rect->mSize);
 
@@ -217,8 +230,7 @@ namespace Orbis {
                     break;
                 }
 
-                case DrawingType::Text:
-                {
+                case DrawingType::Text: {
                     auto     text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
                     sf::Text text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
 
@@ -229,17 +241,16 @@ namespace Orbis {
                     break;
                 }
 
-                case DrawingType::Texture:
-                {
-                    auto               tex = std::static_pointer_cast<DrawingsTexture>(drawing);
-                    sf::RectangleShape shape(tex->mSize);
+                case DrawingType::Texture: {
+                    auto               texture = std::static_pointer_cast<DrawingsTexture>(drawing);
+                    sf::RectangleShape shape(texture->mSize);
 
                     shape.setPosition(pos_drawing);
-                    shape.setFillColor(tex->mFillColor);
-                    shape.setTexture(tex->mTexture.get());
+                    shape.setFillColor(texture->mFillColor);
+                    shape.setTexture(texture->mTexture.get());
 
-                    if (tex->mTextureSmoothing == true) {
-                        tex->mTexture->setSmooth(true);
+                    if (texture->mTextureSmoothing == true) {
+                        texture->mTexture->setSmooth(true);
                     }
 
                     window.draw(shape);
@@ -263,6 +274,193 @@ namespace Orbis {
             }
 
             sf::Vector2f pos_global = pos_panel + mPosition;
+
+            std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
+
+            for (const auto& [id, drawing] : mDrawingsRect) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            for (const auto& [id, drawing] : mDrawingsText) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            for (const auto& [id, drawing] : mDrawingsTexture) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            std::sort(all_drawings.begin(), all_drawings.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            for (const auto& [zlevel, drawing] : all_drawings) {
+                RenderDrawing(window, drawing, pos_global);
+            }
+        }
+    };
+
+    class Button : public Widget {
+    private:
+        std::function<void()> mCallback;
+        ButtonState           mState = ButtonState::Normal;
+
+        sf::Color mColorNormal  = sf::Color(200, 200, 200, 255);
+        sf::Color mColorHover   = sf::Color(220, 220, 220, 255);
+        sf::Color mColorPressed = sf::Color(150, 150, 150, 255);
+
+        bool mWasPressed = false;
+
+        void RenderDrawing(sf::RenderWindow&                window,
+                           const std::shared_ptr<Drawings>& drawing,
+                           sf::Vector2f                     pos_widget) {
+            sf::Vector2f pos_drawing = pos_widget + drawing->mPosition;
+
+            switch (drawing->mType) {
+                case DrawingType::Rect: {
+                    auto               rect = std::static_pointer_cast<DrawingsRect>(drawing);
+                    sf::RectangleShape shape(rect->mSize);
+
+                    shape.setPosition(pos_drawing);
+                    shape.setFillColor(rect->mFillColor);
+
+                    if (rect->mIsOutlined == true) {
+                        shape.setOutlineThickness(rect->mOutlineThickness);
+                        shape.setOutlineColor(rect->mOutlineColor);
+                    }
+
+                    // TODO: Implement rounded rectangles when (mIsRounded == true)
+
+                    window.draw(shape);
+
+                    break;
+                }
+
+                case DrawingType::Text: {
+                    auto     text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
+                    sf::Text text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+
+                    text.setPosition(pos_drawing);
+                    text.setFillColor(text_drawing->mFillColor);
+                    window.draw(text);
+
+                    break;
+                }
+
+                case DrawingType::Texture: {
+                    auto               texture = std::static_pointer_cast<DrawingsTexture>(drawing);
+                    sf::RectangleShape shape(texture->mSize);
+
+                    shape.setPosition(pos_drawing);
+                    shape.setFillColor(texture->mFillColor);
+                    shape.setTexture(texture->mTexture.get());
+
+                    if (texture->mTextureSmoothing == true) {
+                        texture->mTexture->setSmooth(true);
+                    }
+
+                    window.draw(shape);
+
+                    break;
+                }
+            }
+        }
+
+    public:
+        Button() = default;
+
+        ButtonState GetState() const {
+            return mState;
+        }
+
+        sf::Color GetStateColor() const {
+            switch (mState) {
+                case ButtonState::Hover:
+                    return mColorHover;
+                case ButtonState::Pressed:
+                    return mColorPressed;
+                default:
+                    return mColorNormal;
+            }
+        }
+
+        Button& SetCallback(std::function<void()> callback) {
+            mCallback = std::move(callback);
+
+            return *this;
+        }
+
+        Button& SetStateColor(ButtonState state, sf::Color color) {
+            switch (state) {
+                case ButtonState::Normal: {
+                    mColorNormal = color;
+
+                    break;
+                }
+
+                case ButtonState::Hover: {
+                    mColorHover = color;
+
+                    break;
+                }
+
+                case ButtonState::Pressed: {
+                    mColorPressed = color;
+
+                    break;
+                }
+            }
+
+            return *this;
+        }
+
+        void Update(const Controls& controls, sf::Vector2f pos_panel) override {
+            if (mIsVisible == false) {
+                return;
+            }
+
+            sf::Vector2f  pos_global = pos_panel + mPosition;
+            sf::FloatRect bounds(pos_global, mSize);
+
+            bool is_hovered = bounds.contains(controls.mMouse.mPosition);
+
+            if (is_hovered == true) {
+                if (controls.mMouse.mLPress == true) {
+                    mState      = ButtonState::Pressed;
+                    mWasPressed = true;
+                }
+                else {
+                    if (mWasPressed == true) {
+                        if (mCallback) {
+                            mCallback();
+                        }
+
+                        mWasPressed = false;
+                    }
+
+                    mState = ButtonState::Hover;
+                }
+            }
+            else {
+                mState = ButtonState::Normal;
+
+                if (controls.mMouse.mLPress == false) {
+                    mWasPressed = false;
+                }
+            }
+        }
+
+        void Render(sf::RenderWindow& window, sf::Vector2f pos_panel) override {
+            if (mIsVisible == false) {
+                return;
+            }
+
+            sf::Vector2f pos_global = pos_panel + mPosition;
+
+            sf::RectangleShape shape(mSize);
+
+            shape.setPosition(pos_global);
+            shape.setFillColor(GetStateColor());
+            window.draw(shape);
 
             std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
 
@@ -341,7 +539,7 @@ namespace Orbis {
             return *this;
         }
 
-        Panel& SetVisible(bool visible) {
+        Panel& SetVisibility(bool visible) {
             mIsVisible = visible;
 
             return *this;
@@ -375,9 +573,7 @@ namespace Orbis {
             }
         }
     };
-} // namespace Orbis
 
-namespace Orbis {
     template <typename WT>
     class WidgetHandle {
     private:
@@ -414,8 +610,28 @@ namespace Orbis {
             return *this;
         }
 
-        WidgetHandle& SetVisible(bool visible) {
-            mWidget->SetVisible(visible);
+        WidgetHandle& SetZLevel(size_t zlevel) {
+            mWidget->SetZLevel(zlevel);
+
+            return *this;
+        }
+
+        WidgetHandle& SetVisibility(bool visible) {
+            mWidget->SetVisibility(visible);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetCallback(std::function<void()> callback) {
+            static_cast<Button*>(mWidget.get())->SetCallback(callback);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetStateColor(ButtonState state, sf::Color color) {
+            static_cast<Button*>(mWidget.get())->SetStateColor(state, color);
 
             return *this;
         }
@@ -494,8 +710,8 @@ namespace Orbis {
             return *this;
         }
 
-        PanelHandle& SetVisible(bool visible) {
-            mPanel->SetVisible(visible);
+        PanelHandle& SetVisibility(bool visible) {
+            mPanel->SetVisibility(visible);
 
             return *this;
         }
@@ -599,16 +815,16 @@ namespace Orbis {
             return PanelHandle(std::make_shared<Panel>());
         }
 
-        static WidgetHandle<Canvas> CreateWidget(WidgetType wtype) {
-            switch (wtype) {
-                case WidgetType::Canvas:
-                    return WidgetHandle<Canvas>(std::make_shared<Canvas>());
-
-                case WidgetType::Button:
-                    throw std::runtime_error("Button widget not yet implemented");
-
-                default:
-                    throw std::runtime_error("Unknown widget type");
+        template <WidgetType Type>
+        static auto CreateWidget() {
+            if constexpr (Type == WidgetType::Canvas) {
+                return WidgetHandle<Canvas>(std::make_shared<Canvas>());
+            }
+            else if constexpr (Type == WidgetType::Button) {
+                return WidgetHandle<Button>(std::make_shared<Button>());
+            }
+            else {
+                static_assert(Type == WidgetType::Canvas || Type == WidgetType::Button, "Unknown widget type");
             }
         }
 

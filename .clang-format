@@ -63,7 +63,7 @@ BraceWrapping:
     BeforeElse: true
     BeforeLambdaBody: false
     BeforeWhile: false
-    AfterCaseLabel: true
+    AfterCaseLabel: false
     AfterClass: false
     AfterControlStatement: Never
     AfterEnum: false
@@ -73,9 +73,9 @@ BraceWrapping:
     AfterUnion: false
     AfterExternBlock: true
     IndentBraces: false
-    SplitEmptyFunction: true
-    SplitEmptyRecord: true
-    SplitEmptyNamespace: true
+    SplitEmptyFunction: false
+    SplitEmptyRecord: false
+    SplitEmptyNamespace: false
     BeforeInitializerList: true
 
 # Sorting
