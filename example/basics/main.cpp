@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include <Orbis/UINew.hpp>
+#include <Orbis/UI.hpp>
 #include <Orbis/Utils.hpp>
 
 using namespace Orbis;
