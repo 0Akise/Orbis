@@ -153,21 +153,21 @@ namespace Orbis {
 
         Widget& DrawText(
             const std::string&        id,
-            std::shared_ptr<sf::Font> font,
             size_t                    font_size,
             sf::Vector2f              position,
             size_t                    zlevel,
             sf::Color                 fill_color,
+            std::shared_ptr<sf::Font> font,
             const std::string&        text = "") {
             auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType      = DrawingType::Text;
             drawing->mID        = id;
-            drawing->mFont      = font;
             drawing->mFontSize  = font_size;
             drawing->mPosition  = position;
             drawing->mZLevel    = zlevel;
             drawing->mFillColor = fill_color;
+            drawing->mFont      = font;
             drawing->mText      = text;
 
             mDrawingsText[id] = drawing;
@@ -177,21 +177,21 @@ namespace Orbis {
 
         Widget& DrawTexture(
             const std::string&           id,
-            std::shared_ptr<sf::Texture> texture,
             sf::Vector2f                 size,
             sf::Vector2f                 position,
             size_t                       zlevel,
             sf::Color                    fill_color,
+            std::shared_ptr<sf::Texture> texture,
             bool                         smoothing_enabled = true) {
             auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType             = DrawingType::Texture;
-            drawing->mTexture          = texture;
             drawing->mID               = id;
             drawing->mSize             = size;
             drawing->mPosition         = position;
             drawing->mZLevel           = zlevel;
             drawing->mFillColor        = fill_color;
+            drawing->mTexture          = texture;
             drawing->mTextureSmoothing = smoothing_enabled;
 
             mDrawingsTexture[id] = drawing;
@@ -199,8 +199,9 @@ namespace Orbis {
             return *this;
         }
 
-        virtual void Update(const Controls& controls, sf::Vector2f pos_panel) = 0;
-        virtual void Render(sf::RenderWindow& window, sf::Vector2f pos_panel) = 0;
+        virtual std::shared_ptr<Widget> CloneImpl() const                                            = 0;
+        virtual void                    UpdateImpl(const Controls& controls, sf::Vector2f pos_panel) = 0;
+        virtual void                    RenderImpl(sf::RenderWindow& window, sf::Vector2f pos_panel) = 0;
     };
 
     class Canvas : public Widget {
@@ -263,12 +264,38 @@ namespace Orbis {
     public:
         Canvas() = default;
 
-        void Update(const Controls& controls, sf::Vector2f pos_panel) override {
+        std::shared_ptr<Widget> CloneImpl() const override {
+            auto cloned = std::make_shared<Canvas>();
+
+            cloned->mSize      = mSize;
+            cloned->mPosition  = mPosition;
+            cloned->mZLevel    = mZLevel;
+            cloned->mIsVisible = mIsVisible;
+
+            for (const auto& [id, drawing] : mDrawingsRect) {
+                auto cloned_drawing       = std::make_shared<DrawingsRect>(*drawing);
+                cloned->mDrawingsRect[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsText) {
+                auto cloned_drawing       = std::make_shared<DrawingsText>(*drawing);
+                cloned->mDrawingsText[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsTexture) {
+                auto cloned_drawing          = std::make_shared<DrawingsTexture>(*drawing);
+                cloned->mDrawingsTexture[id] = cloned_drawing;
+            }
+
+            return cloned;
+        }
+
+        void UpdateImpl(const Controls& controls, sf::Vector2f pos_panel) override {
             (void)controls;
             (void)pos_panel;
         }
 
-        void Render(sf::RenderWindow& window, sf::Vector2f pos_panel) override {
+        void RenderImpl(sf::RenderWindow& window, sf::Vector2f pos_panel) override {
             if (mIsVisible == false) {
                 return;
             }
@@ -413,7 +440,41 @@ namespace Orbis {
             return *this;
         }
 
-        void Update(const Controls& controls, sf::Vector2f pos_panel) override {
+        std::shared_ptr<Widget> CloneImpl() const override {
+            auto cloned = std::make_shared<Button>();
+
+            cloned->mSize      = mSize;
+            cloned->mPosition  = mPosition;
+            cloned->mZLevel    = mZLevel;
+            cloned->mIsVisible = mIsVisible;
+
+            cloned->mCallback     = mCallback;
+            cloned->mColorNormal  = mColorNormal;
+            cloned->mColorHover   = mColorHover;
+            cloned->mColorPressed = mColorPressed;
+
+            cloned->mState      = ButtonState::Normal;
+            cloned->mWasPressed = false;
+
+            for (const auto& [id, drawing] : mDrawingsRect) {
+                auto cloned_drawing       = std::make_shared<DrawingsRect>(*drawing);
+                cloned->mDrawingsRect[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsText) {
+                auto cloned_drawing       = std::make_shared<DrawingsText>(*drawing);
+                cloned->mDrawingsText[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsTexture) {
+                auto cloned_drawing          = std::make_shared<DrawingsTexture>(*drawing);
+                cloned->mDrawingsTexture[id] = cloned_drawing;
+            }
+
+            return cloned;
+        }
+
+        void UpdateImpl(const Controls& controls, sf::Vector2f pos_panel) override {
             if (mIsVisible == false) {
                 return;
             }
@@ -449,7 +510,7 @@ namespace Orbis {
             }
         }
 
-        void Render(sf::RenderWindow& window, sf::Vector2f pos_panel) override {
+        void RenderImpl(sf::RenderWindow& window, sf::Vector2f pos_panel) override {
             if (mIsVisible == false) {
                 return;
             }
@@ -559,7 +620,7 @@ namespace Orbis {
             }
 
             for (auto& widget : mWidgets) {
-                widget->Update(controls, mPosition);
+                widget->UpdateImpl(controls, mPosition);
             }
         }
 
@@ -569,7 +630,7 @@ namespace Orbis {
             }
 
             for (auto& widget : mWidgets) {
-                widget->Render(window, mPosition);
+                widget->RenderImpl(window, mPosition);
             }
         }
     };
@@ -636,43 +697,53 @@ namespace Orbis {
             return *this;
         }
 
-        WidgetHandle& DrawRect(const std::string& id,
-                               sf::Vector2f       size,
-                               sf::Vector2f       position,
-                               size_t             zlevel,
-                               sf::Color          fill_color,
-                               bool               is_outlined       = false,
-                               float              outline_thickness = 0.0f,
-                               sf::Color          outline_color     = sf::Color::Black,
-                               bool               is_rounded        = false,
-                               float              rounding_radius   = 0.0f) {
+        WidgetHandle& DrawRect(
+            const std::string& id,
+            sf::Vector2f       size,
+            sf::Vector2f       position,
+            size_t             zlevel,
+            sf::Color          fill_color,
+            bool               is_outlined       = false,
+            float              outline_thickness = 0.0f,
+            sf::Color          outline_color     = sf::Color::Black,
+            bool               is_rounded        = false,
+            float              rounding_radius   = 0.0f) {
             mWidget->DrawRect(id, size, position, zlevel, fill_color, is_outlined, outline_thickness, outline_color, is_rounded, rounding_radius);
 
             return *this;
-        };
-        WidgetHandle& DrawText(const std::string&        id,
-                               std::shared_ptr<sf::Font> font,
-                               size_t                    font_size,
-                               sf::Vector2f              position,
-                               size_t                    zlevel,
-                               sf::Color                 fill_color,
-                               const std::string&        text = "") {
-            mWidget->DrawText(id, font, font_size, position, zlevel, fill_color, text);
+        }
+
+        WidgetHandle& DrawText(
+            const std::string&        id,
+            size_t                    font_size,
+            sf::Vector2f              position,
+            size_t                    zlevel,
+            sf::Color                 fill_color,
+            std::shared_ptr<sf::Font> font,
+            const std::string&        text = "") {
+            mWidget->DrawText(id, font_size, position, zlevel, fill_color, font, text);
 
             return *this;
-        };
+        }
 
-        WidgetHandle& DrawTexture(const std::string&           id,
-                                  std::shared_ptr<sf::Texture> texture,
-                                  sf::Vector2f                 size,
-                                  sf::Vector2f                 position,
-                                  size_t                       zlevel,
-                                  sf::Color                    fill_color,
-                                  bool                         smoothing_enabled = true) {
-            mWidget->DrawTexture(id, texture, size, position, zlevel, fill_color, smoothing_enabled);
+        WidgetHandle& DrawTexture(
+            const std::string&           id,
+            sf::Vector2f                 size,
+            sf::Vector2f                 position,
+            size_t                       zlevel,
+            sf::Color                    fill_color,
+            std::shared_ptr<sf::Texture> texture,
+            bool                         smoothing_enabled = true) {
+            mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture, smoothing_enabled);
 
             return *this;
-        };
+        }
+
+        WidgetHandle Clone() const {
+            auto cloned = std::static_pointer_cast<WT>(mWidget->CloneImpl());
+
+            return WidgetHandle<WT>(cloned);
+        }
     };
 
     class PanelHandle {
@@ -745,8 +816,9 @@ namespace Orbis {
             std::cout << "=====================\n";
 
             for (const auto& panel : mPanels) {
-                std::cout << "Name: " << panel->GetName()
-                          << "\tZ-Level: " << panel->GetZLevel() << "\n";
+                std::cout
+                    << "Name: " << panel->GetName() << "\t"
+                    << "ZLevel: " << panel->GetZLevel() << "\n";
             }
 
             std::cout << std::endl;
