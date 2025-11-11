@@ -8,6 +8,7 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/System/Controls.hpp"
 #include "Orbis/System/Drawing.hpp"
 #include "Orbis/System/ResourceVault.hpp"
@@ -215,20 +216,36 @@ namespace Orbis {
 
             switch (drawing->mType) {
                 case DrawingType::Rect: {
-                    auto               rect = std::static_pointer_cast<DrawingsRect>(drawing);
-                    sf::RectangleShape shape(rect->mSize);
+                    // TODO : Implement Outlines
 
-                    shape.setPosition(pos_drawing);
-                    shape.setFillColor(rect->mFillColor);
+                    auto rect = std::static_pointer_cast<DrawingsRect>(drawing);
 
-                    if (rect->mIsOutlined == true) {
-                        shape.setOutlineThickness(rect->mOutlineThickness);
-                        shape.setOutlineColor(rect->mOutlineColor);
+                    if (rect->mIsRounded == true) {
+                        sf::ConvexShape shape = sf::RectRounded(rect->mSize, rect->mRoundingRadius);
+
+                        shape.setPosition(pos_drawing);
+                        shape.setFillColor(rect->mFillColor);
+
+                        if (rect->mIsOutlined == true) {
+                            shape.setOutlineThickness(rect->mOutlineThickness);
+                            shape.setOutlineColor(rect->mOutlineColor);
+                        }
+
+                        window.draw(shape);
                     }
+                    else {
+                        sf::RectangleShape shape = sf::RectangleShape(rect->mSize);
 
-                    // TODO: Implement rounded rectangles when (mIsRounded == true)
+                        shape.setPosition(pos_drawing);
+                        shape.setFillColor(rect->mFillColor);
 
-                    window.draw(shape);
+                        if (rect->mIsOutlined == true) {
+                            shape.setOutlineThickness(rect->mOutlineThickness);
+                            shape.setOutlineColor(rect->mOutlineColor);
+                        }
+
+                        window.draw(shape);
+                    }
 
                     break;
                 }
@@ -375,22 +392,37 @@ namespace Orbis {
 
             switch (drawing->mType) {
                 case DrawingType::Rect: {
-                    auto               rect = std::static_pointer_cast<DrawingsRect>(drawing);
-                    sf::RectangleShape shape(rect->mSize);
+                    // TODO : Implement Outlines
 
+                    auto      rect        = std::static_pointer_cast<DrawingsRect>(drawing);
                     sf::Color state_color = GetStateColor();
 
-                    shape.setPosition(pos_drawing);
-                    shape.setFillColor(state_color);
+                    if (rect->mIsRounded == true) {
+                        sf::ConvexShape shape = sf::RectRounded(rect->mSize, rect->mRoundingRadius);
 
-                    if (rect->mIsOutlined == true) {
-                        shape.setOutlineThickness(rect->mOutlineThickness);
-                        shape.setOutlineColor(rect->mOutlineColor);
+                        shape.setPosition(pos_drawing);
+                        shape.setFillColor(state_color);
+
+                        if (rect->mIsOutlined == true) {
+                            shape.setOutlineThickness(rect->mOutlineThickness);
+                            shape.setOutlineColor(rect->mOutlineColor);
+                        }
+
+                        window.draw(shape);
                     }
+                    else {
+                        sf::RectangleShape shape = sf::RectangleShape(rect->mSize);
 
-                    // TODO: Implement rounded rectangles when (mIsRounded == true)
+                        shape.setPosition(pos_drawing);
+                        shape.setFillColor(state_color);
 
-                    window.draw(shape);
+                        if (rect->mIsOutlined == true) {
+                            shape.setOutlineThickness(rect->mOutlineThickness);
+                            shape.setOutlineColor(rect->mOutlineColor);
+                        }
+
+                        window.draw(shape);
+                    }
 
                     break;
                 }

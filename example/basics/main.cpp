@@ -69,7 +69,8 @@ int main() {
     sf::Vector2f size_hud  = sf::Vector2f({400, 300});
     sf::Vector2f size_menu = sf::Vector2f({400, 400});
 
-    // Here, we first declare STATIC stuffs that doesn't change over time.
+    // Here, we first build up the widget. you can declare both STATIC and DYNAMIC stuffs.
+    // you can fetch stuffs that changes dynamically later.
     canvas_hud
         .SetSize(size_hud)
         .SetPosition({0, 0})
@@ -86,7 +87,7 @@ int main() {
         .SetSize(size_menu)
         .SetPosition({0, 0})
         .SetZLevel(10)
-        .DrawRect("menu_bg", {400, 300}, {0, 0}, 0, sf::Color({255, 255, 255, 255}));
+        .DrawRect("menu_bg", {400, 300}, {0, 0}, 0, sf::Color({255, 255, 255, 255}), false, 0, sf::Color::White, true, 15.0f);
 
     // things like HUD need to change dynamically as the game progresses.
     // so we declare DYNAMIC stuffs that changes over time!
@@ -106,7 +107,7 @@ int main() {
             hp_anim.mStartTime = std::chrono::steady_clock::now();
             hp_anim.mFrom = hp_anim.mCurrent;
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax; })
-        .DrawRect("button_hp_up", {100, 50}, {0, 0}, 0, sf::Color::White)
+        .DrawRect("button_hp_up", {100, 50}, {0, 0}, 0, sf::Color::White, false, 0, sf::Color::White, true, 15.0)
         .DrawText("button_text_hp_up", 16, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "HP UP");
 
     button_hp_down
@@ -121,7 +122,7 @@ int main() {
             hp_anim.mStartTime = std::chrono::steady_clock::now();
             hp_anim.mFrom = hp_anim.mCurrent;
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax; })
-        .DrawRect("button_hp_up", {100, 50}, {0, 0}, 0, sf::Color::White)
+        .DrawRect("button_hp_up", {100, 50}, {0, 0}, 0, sf::Color::White, false, 0, sf::Color::White, true, 15.0)
         .DrawText("button_text_hp_down", 16, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "HP DOWN");
 
     button_exit
