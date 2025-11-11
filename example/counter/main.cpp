@@ -28,7 +28,7 @@ int main() {
         .SetZLevel(0)
         .DrawRect("background", {400, 400}, {0, 0}, 0, sf::Color(240, 240, 240, 255))
         .DrawRect("header", {400, 40}, {0, 0}, 1, sf::Color(100, 150, 255, 255))
-        .DrawText("title", 20, {10, 10}, 10, sf::Color::White, font_basic, "Button Test");
+        .DrawText("title", 20, {10, 10}, 10, sf::Color::White, font_basic, TextAlign::Center, "Button Test");
 
     button_normal
         .SetSize({150, 50})
@@ -40,7 +40,7 @@ int main() {
         .SetCallback([]() {
             std::cout << "Button clicked!" << std::endl;
         })
-        .DrawText("btn_text", 16, {30, 15}, 10, sf::Color::White, font_basic, "Click Me!");
+        .DrawText("btn_text", 16, {30, 15}, 10, sf::Color::White, font_basic, TextAlign::Center, "Click Me!");
 
     button_styled
         .SetSize({150, 50})
@@ -53,7 +53,7 @@ int main() {
             std::cout << "Styled button clicked!" << std::endl;
         })
         .DrawRect("btn_border", {146, 46}, {2, 2}, 0, sf::Color::Transparent, true, 2.0f, sf::Color::White)
-        .DrawText("btn_text", 16, {25, 15}, 10, sf::Color::White, font_basic, "Styled Button");
+        .DrawText("btn_text", 16, {25, 15}, 10, sf::Color::White, font_basic, TextAlign::Center, "Styled Button");
 
     button_counter
         .SetSize({150, 50})
@@ -71,7 +71,7 @@ int main() {
 
             text.mText = "Count: " + std::to_string(counter);
         })
-        .DrawText("btn_text", 16, {30, 15}, 10, sf::Color::White, font_basic, "Count: 0");
+        .DrawText("btn_text", 16, {30, 15}, 10, sf::Color::White, font_basic, TextAlign::Center, "Count: 0");
 
     auto panel_main = UI::CreatePanel();
 

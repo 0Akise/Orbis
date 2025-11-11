@@ -158,7 +158,8 @@ namespace Orbis {
             size_t                    zlevel,
             sf::Color                 fill_color,
             std::shared_ptr<sf::Font> font,
-            const std::string&        text = "") {
+            TextAlign                 align = TextAlign::LeftTop,
+            const std::string&        text  = "") {
             auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType      = DrawingType::Text;
@@ -168,6 +169,7 @@ namespace Orbis {
             drawing->mZLevel    = zlevel;
             drawing->mFillColor = fill_color;
             drawing->mFont      = font;
+            drawing->mAlign     = align;
             drawing->mText      = text;
 
             mDrawingsText[id] = drawing;
@@ -232,10 +234,39 @@ namespace Orbis {
                 }
 
                 case DrawingType::Text: {
-                    auto     text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
-                    sf::Text text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+                    auto          text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
+                    sf::Text      text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+                    sf::FloatRect bounds = text.getLocalBounds();
+                    sf::Vector2f  offset = {0, 0};
 
-                    text.setPosition(pos_drawing);
+                    float offset_x = 0.0f;
+                    float offset_y = 0.0f;
+
+                    if (text_drawing->mAlign == TextAlign::CenterTop ||
+                        text_drawing->mAlign == TextAlign::Center ||
+                        text_drawing->mAlign == TextAlign::CenterBottom) {
+                        offset_x = -(bounds.size.x) / 2.0f;
+                    }
+                    else if (text_drawing->mAlign == TextAlign::RightTop ||
+                             text_drawing->mAlign == TextAlign::RightCenter ||
+                             text_drawing->mAlign == TextAlign::RightBottom) {
+                        offset_x = -(bounds.size.x);
+                    }
+
+                    if (text_drawing->mAlign == TextAlign::LeftCenter ||
+                        text_drawing->mAlign == TextAlign::Center ||
+                        text_drawing->mAlign == TextAlign::RightCenter) {
+                        offset_y = -(static_cast<float>(text_drawing->mFontSize)) / 2.0f;
+                    }
+                    else if (text_drawing->mAlign == TextAlign::LeftBottom ||
+                             text_drawing->mAlign == TextAlign::CenterBottom ||
+                             text_drawing->mAlign == TextAlign::RightBottom) {
+                        offset_y = -(static_cast<float>(text_drawing->mFontSize));
+                    }
+
+                    offset = {offset_x, offset_y};
+
+                    text.setPosition(pos_drawing + offset);
                     text.setFillColor(text_drawing->mFillColor);
                     window.draw(text);
 
@@ -347,8 +378,10 @@ namespace Orbis {
                     auto               rect = std::static_pointer_cast<DrawingsRect>(drawing);
                     sf::RectangleShape shape(rect->mSize);
 
+                    sf::Color state_color = GetStateColor();
+
                     shape.setPosition(pos_drawing);
-                    shape.setFillColor(rect->mFillColor);
+                    shape.setFillColor(state_color);
 
                     if (rect->mIsOutlined == true) {
                         shape.setOutlineThickness(rect->mOutlineThickness);
@@ -363,10 +396,39 @@ namespace Orbis {
                 }
 
                 case DrawingType::Text: {
-                    auto     text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
-                    sf::Text text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+                    auto          text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
+                    sf::Text      text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+                    sf::FloatRect bounds = text.getLocalBounds();
+                    sf::Vector2f  offset = {0, 0};
 
-                    text.setPosition(pos_drawing);
+                    float offset_x = 0.0f;
+                    float offset_y = 0.0f;
+
+                    if (text_drawing->mAlign == TextAlign::CenterTop ||
+                        text_drawing->mAlign == TextAlign::Center ||
+                        text_drawing->mAlign == TextAlign::CenterBottom) {
+                        offset_x = -bounds.size.x / 2.0f;
+                    }
+                    else if (text_drawing->mAlign == TextAlign::RightTop ||
+                             text_drawing->mAlign == TextAlign::RightCenter ||
+                             text_drawing->mAlign == TextAlign::RightBottom) {
+                        offset_x = -bounds.size.x;
+                    }
+
+                    if (text_drawing->mAlign == TextAlign::LeftCenter ||
+                        text_drawing->mAlign == TextAlign::Center ||
+                        text_drawing->mAlign == TextAlign::RightCenter) {
+                        offset_y = -static_cast<float>(text_drawing->mFontSize) / 2.0f;
+                    }
+                    else if (text_drawing->mAlign == TextAlign::LeftBottom ||
+                             text_drawing->mAlign == TextAlign::CenterBottom ||
+                             text_drawing->mAlign == TextAlign::RightBottom) {
+                        offset_y = -static_cast<float>(text_drawing->mFontSize);
+                    }
+
+                    offset = {offset_x, offset_y};
+
+                    text.setPosition(pos_drawing + offset);
                     text.setFillColor(text_drawing->mFillColor);
                     window.draw(text);
 
@@ -378,13 +440,21 @@ namespace Orbis {
                     sf::RectangleShape shape(texture->mSize);
 
                     shape.setPosition(pos_drawing);
-                    shape.setFillColor(texture->mFillColor);
                     shape.setTexture(texture->mTexture.get());
 
                     if (texture->mTextureSmoothing == true) {
                         texture->mTexture->setSmooth(true);
                     }
 
+                    sf::Color blended_color = texture->mFillColor;
+                    sf::Color state_color   = GetStateColor();
+
+                    blended_color.r = (blended_color.r * state_color.r) / 255;
+                    blended_color.g = (blended_color.g * state_color.g) / 255;
+                    blended_color.b = (blended_color.b * state_color.b) / 255;
+                    blended_color.a = (blended_color.a * state_color.a) / 255;
+
+                    shape.setFillColor(blended_color);
                     window.draw(shape);
 
                     break;
@@ -515,14 +585,7 @@ namespace Orbis {
                 return;
             }
 
-            sf::Vector2f pos_global = pos_panel + mPosition;
-
-            sf::RectangleShape shape(mSize);
-
-            shape.setPosition(pos_global);
-            shape.setFillColor(GetStateColor());
-            window.draw(shape);
-
+            sf::Vector2f                                              pos_global = pos_panel + mPosition;
             std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
 
             for (const auto& [id, drawing] : mDrawingsRect) {
@@ -720,8 +783,9 @@ namespace Orbis {
             size_t                    zlevel,
             sf::Color                 fill_color,
             std::shared_ptr<sf::Font> font,
-            const std::string&        text = "") {
-            mWidget->DrawText(id, font_size, position, zlevel, fill_color, font, text);
+            TextAlign                 align = TextAlign::LeftTop,
+            const std::string&        text  = "") {
+            mWidget->DrawText(id, font_size, position, zlevel, fill_color, font, align, text);
 
             return *this;
         }

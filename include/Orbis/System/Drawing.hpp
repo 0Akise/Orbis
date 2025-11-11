@@ -9,6 +9,18 @@ namespace Orbis {
         Texture,
     };
 
+    enum class TextAlign {
+        LeftTop,
+        CenterTop,
+        RightTop,
+        LeftCenter,
+        Center,
+        RightCenter,
+        LeftBottom,
+        CenterBottom,
+        RightBottom,
+    };
+
     class Drawings {
     public:
         DrawingType  mType;
@@ -35,6 +47,7 @@ namespace Orbis {
         std::shared_ptr<sf::Font> mFont;
         size_t                    mFontSize;
         std::string               mText;
+        TextAlign                 mAlign;
     };
 
     class DrawingsTexture : public Drawings {

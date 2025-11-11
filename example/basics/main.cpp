@@ -1,6 +1,3 @@
-// WARNING: Currently working on massive migration!
-// THIS CODE IS A CONCEPT FOR NOW, NOT A WORKING EXAMPLE!
-
 #include <iostream>
 
 #include <Orbis/UI.hpp>
@@ -29,7 +26,7 @@ struct AnimationState {
 // SFML Entrance
 int main() {
     // Create Game window and UI context. You can have multiple windows and contexts!
-    sf::Vector2f     screen_size({1080, 720});
+    sf::Vector2f     screen_size({800, 800});
     sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Orbis Examples: Basics", sf::Style::Default);
 
     // Don't forget to initialize UI system to create UI cache!
@@ -79,11 +76,11 @@ int main() {
         .SetZLevel(0)
         .DrawRect("hud_bg", {400, 300}, {0, 0}, 0, sf::Color({255, 255, 255, 255}))
         .DrawRect("hud_strip", {400, 30}, {0, 0}, 1, sf::Color({0, 180, 255, 255}))
-        .DrawText("hud_strip_text", 15, {10, 10}, 20, sf::Color::White, font_basic, "Simple HUD")
+        .DrawText("hud_strip_text", 16, {10, 15}, 20, sf::Color::White, font_basic, TextAlign::LeftCenter, "Simple HUD")
         .DrawRect("hud_hp_bg", {320, 32}, {55, 50}, 2, sf::Color({200, 200, 200, 255}))
         .DrawRect("hud_hp_bar", {310, 28}, {60, 52}, 3, sf::Color({227, 47, 92, 255}))
         .DrawTexture("hud_hp_icon", {32, 32}, {15, 50}, 10, sf::Color::White, texture_hp)
-        .DrawText("hud_hp_text", 13, {65, 55}, 20, sf::Color::White, font_basic, std::to_string(player.mHealthCurrent));
+        .DrawText("hud_hp_text", 14, {75, 64}, 20, sf::Color::White, font_basic, TextAlign::LeftCenter, std::to_string(player.mHealthCurrent));
 
     canvas_menu
         .SetSize(size_menu)
@@ -100,24 +97,32 @@ int main() {
     button_hp_up
         .SetSize({100, 50})
         .SetPosition({20, 25})
+        .SetStateColor(ButtonState::Normal, sf::Color(100, 150, 255, 255))
+        .SetStateColor(ButtonState::Hover, sf::Color(120, 170, 255, 255))
+        .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 255))
         .SetCallback([&player, &hp_anim]() {
             player.mHealthCurrent = std::min(player.mHealthMax, player.mHealthCurrent + 10);
             hp_anim.mIsAnimating = true;
             hp_anim.mStartTime = std::chrono::steady_clock::now();
             hp_anim.mFrom = hp_anim.mCurrent;
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax; })
-        .DrawText("button_text_hp_up", 15, {50, 25}, 20, sf::Color::Black, font_basic, "HP UP");
+        .DrawRect("button_hp_up", {100, 50}, {0, 0}, 0, sf::Color::White)
+        .DrawText("button_text_hp_up", 16, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "HP UP");
 
     button_hp_down
         .SetSize({100, 50})
         .SetPosition({20, 100})
+        .SetStateColor(ButtonState::Normal, sf::Color(100, 150, 255, 255))
+        .SetStateColor(ButtonState::Hover, sf::Color(120, 170, 255, 255))
+        .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 255))
         .SetCallback([&player, &hp_anim]() {
             player.mHealthCurrent = std::max(0, player.mHealthCurrent - 10);
             hp_anim.mIsAnimating = true;
             hp_anim.mStartTime = std::chrono::steady_clock::now();
             hp_anim.mFrom = hp_anim.mCurrent;
             hp_anim.mTo = static_cast<float>(player.mHealthCurrent) / player.mHealthMax; })
-        .DrawText("button_text_hp_down", 15, {50, 25}, 20, sf::Color::Black, font_basic, "HP DOWN");
+        .DrawRect("button_hp_up", {100, 50}, {0, 0}, 0, sf::Color::White)
+        .DrawText("button_text_hp_down", 16, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "HP DOWN");
 
     button_exit
         .SetSize({25, 25})
@@ -127,15 +132,17 @@ int main() {
         .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 255))
         .SetCallback([&window]() {
             window.close();
-        });
+        })
+        .DrawRect("button_exit_rect", {25, 25}, {0, 0}, 0, sf::Color::Black);
 
     // If you want templated widget with styles applied, you can!
     // All you need to do is to set Size and how it looks like, set other properties later.
     button_styled
         .SetSize({100, 50})
-        .SetStateColor(ButtonState::Normal, sf::Color(100, 150, 255, 150))
-        .SetStateColor(ButtonState::Hover, sf::Color(120, 170, 255, 150))
-        .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 150));
+        .SetStateColor(ButtonState::Normal, sf::Color(200, 200, 200, 100))
+        .SetStateColor(ButtonState::Hover, sf::Color(220, 220, 220, 100))
+        .SetStateColor(ButtonState::Pressed, sf::Color(150, 150, 150, 100))
+        .DrawTexture("button_styled_bg", {100, 50}, {0, 0}, 0, sf::Color::White, texture_btn_bg);
 
     // Now we create Panels which you can add widgets we created previously!
     auto panel_hud  = UI::CreatePanel();
@@ -163,12 +170,12 @@ int main() {
                        .Clone() // Clone to make a button independent!
                        .SetPosition({140, 25})
                        .SetCallback([]() { /* Some callback */ })
-                       .DrawText("btn_text1", 15, {15, 15}, 20, sf::Color::White, font_basic, "AAA"))
+                       .DrawText("btn_text1", 15, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "AAA"))
         .AddWidget(button_styled
                        .Clone()
                        .SetPosition({140, 100})
                        .SetCallback([]() { /* Some callback */ })
-                       .DrawText("btn_text2", 15, {15, 15}, 20, sf::Color::White, font_basic, "BBB"))
+                       .DrawText("btn_text2", 15, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "BBB"))
         .AddWidget(button_exit)
         .Register(context);
 
