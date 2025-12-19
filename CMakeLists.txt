@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(ORBIS_BUILD_EXAMPLE "Build example projects" ON)
+option(ORBIS_BUILD_EXAMPLE "Build example projects" ${PROJECT_IS_TOP_LEVEL})
 option(ORBIS_BUILD_TEST "Build tests" OFF)
 option(ORBIS_BUILD_DOCS "Build documentation" OFF)
 
