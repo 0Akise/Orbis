@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -10,8 +11,70 @@
 
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/System/Controls.hpp"
-#include "Orbis/System/Drawing.hpp"
 #include "Orbis/System/ResourceVault.hpp"
+
+namespace Orbis {
+    enum class DrawingType {
+        Line,
+        Rect,
+        Text,
+        Texture,
+    };
+
+    enum class TextAlign {
+        LeftTop,
+        CenterTop,
+        RightTop,
+        LeftCenter,
+        Center,
+        RightCenter,
+        LeftBottom,
+        CenterBottom,
+        RightBottom,
+    };
+
+    class Drawings {
+    public:
+        DrawingType  mType;
+        std::string  mID;
+        sf::Vector2f mPosition;
+        size_t       mZLevel;
+        sf::Color    mFillColor;
+
+        virtual ~Drawings() = default;
+    };
+
+    class DrawingsLine : public Drawings {
+    public:
+        std::vector<sf::Vector2f> mPoints;
+        float                     mThickness;
+    };
+
+    class DrawingsRect : public Drawings {
+    public:
+        sf::Vector2f mSize;
+        bool         mIsOutlined;
+        float        mOutlineThickness;
+        sf::Color    mOutlineColor;
+        bool         mIsRounded;
+        float        mRoundingRadius;
+    };
+
+    class DrawingsText : public Drawings {
+    public:
+        std::shared_ptr<sf::Font> mFont;
+        size_t                    mFontSize;
+        std::string               mText;
+        TextAlign                 mAlign;
+    };
+
+    class DrawingsTexture : public Drawings {
+    public:
+        std::shared_ptr<sf::Texture> mTexture;
+        sf::Vector2f                 mSize;
+        bool                         mTextureSmoothing;
+    };
+} // namespace Orbis
 
 namespace Orbis {
     enum class WidgetType {
@@ -53,6 +116,7 @@ namespace Orbis {
         size_t       mZLevel    = 0;
         bool         mIsVisible = true;
 
+        std::map<std::string, std::shared_ptr<DrawingsLine>>    mDrawingsLine;
         std::map<std::string, std::shared_ptr<DrawingsRect>>    mDrawingsRect;
         std::map<std::string, std::shared_ptr<DrawingsText>>    mDrawingsText;
         std::map<std::string, std::shared_ptr<DrawingsTexture>> mDrawingsTexture;
@@ -126,6 +190,26 @@ namespace Orbis {
 
         Widget& SetVisibility(bool visible) {
             mIsVisible = visible;
+
+            return *this;
+        }
+
+        Widget& DrawLine(
+            const std::string&               id,
+            const std::vector<sf::Vector2f>& points,
+            size_t                           zlevel,
+            sf::Color                        color,
+            float                            thickness = 2.0f) {
+            auto drawing = std::make_shared<DrawingsLine>();
+
+            drawing->mType      = DrawingType::Line;
+            drawing->mID        = id;
+            drawing->mPoints    = points;
+            drawing->mZLevel    = zlevel;
+            drawing->mFillColor = color;
+            drawing->mThickness = thickness;
+
+            mDrawingsLine[id] = drawing;
 
             return *this;
         }
@@ -223,6 +307,60 @@ namespace Orbis {
             sf::Vector2f pos_drawing = pos_widget + (drawing->mPosition);
 
             switch (drawing->mType) {
+                case DrawingType::Line: {
+                    auto line = std::static_pointer_cast<DrawingsLine>(drawing);
+
+                    if (line->mPoints.size() < 2) {
+                        break;
+                    }
+
+                    if (line->mThickness <= 1.0f) {
+                        sf::VertexArray curve(sf::PrimitiveType::LineStrip);
+
+                        for (const auto& point : line->mPoints) {
+                            curve.append(sf::Vertex(pos_drawing + point, line->mFillColor));
+                        }
+
+                        window.draw(curve);
+                    }
+                    else {
+                        sf::VertexArray line_thick     = sf::VertexArray(sf::PrimitiveType::Triangles);
+                        float           thickness_half = line->mThickness / 2.0f;
+
+                        for (size_t i = 0; i < line->mPoints.size() - 1; ++i) {
+                            sf::Vector2f p1 = pos_drawing + line->mPoints[i];
+                            sf::Vector2f p2 = pos_drawing + line->mPoints[i + 1];
+
+                            sf::Vector2f direction = p2 - p1;
+                            float        length    = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+                            if (length < 0.001f) {
+                                continue;
+                            }
+
+                            sf::Vector2f perpendicular = {-direction.y / length, direction.x / length};
+                            sf::Vector2f offset        = perpendicular * thickness_half;
+
+                            sf::Vector2f v1 = p1 + offset;
+                            sf::Vector2f v2 = p1 - offset;
+                            sf::Vector2f v3 = p2 - offset;
+                            sf::Vector2f v4 = p2 + offset;
+
+                            line_thick.append(sf::Vertex(v1, line->mFillColor));
+                            line_thick.append(sf::Vertex(v2, line->mFillColor));
+                            line_thick.append(sf::Vertex(v3, line->mFillColor));
+
+                            line_thick.append(sf::Vertex(v1, line->mFillColor));
+                            line_thick.append(sf::Vertex(v3, line->mFillColor));
+                            line_thick.append(sf::Vertex(v4, line->mFillColor));
+                        }
+
+                        window.draw(line_thick);
+                    }
+
+                    break;
+                }
+
                 case DrawingType::Rect: {
                     // TODO : Implement Outlines
 
@@ -360,6 +498,10 @@ namespace Orbis {
 
             std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
 
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
             for (const auto& [id, drawing] : mDrawingsRect) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
@@ -400,6 +542,60 @@ namespace Orbis {
             sf::Vector2f pos_drawing = pos_widget + drawing->mPosition;
 
             switch (drawing->mType) {
+                case DrawingType::Line: {
+                    auto line = std::static_pointer_cast<DrawingsLine>(drawing);
+
+                    if (line->mPoints.size() < 2) {
+                        break;
+                    }
+
+                    if (line->mThickness <= 1.0f) {
+                        sf::VertexArray curve(sf::PrimitiveType::LineStrip);
+
+                        for (const auto& point : line->mPoints) {
+                            curve.append(sf::Vertex(pos_drawing + point, line->mFillColor));
+                        }
+
+                        window.draw(curve);
+                    }
+                    else {
+                        sf::VertexArray line_thick     = sf::VertexArray(sf::PrimitiveType::Triangles);
+                        float           thickness_half = line->mThickness / 2.0f;
+
+                        for (size_t i = 0; i < line->mPoints.size() - 1; ++i) {
+                            sf::Vector2f p1 = pos_drawing + line->mPoints[i];
+                            sf::Vector2f p2 = pos_drawing + line->mPoints[i + 1];
+
+                            sf::Vector2f direction = p2 - p1;
+                            float        length    = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+                            if (length < 0.001f) {
+                                continue;
+                            }
+
+                            sf::Vector2f perpendicular = {-direction.y / length, direction.x / length};
+                            sf::Vector2f offset        = perpendicular * thickness_half;
+
+                            sf::Vector2f v1 = p1 + offset;
+                            sf::Vector2f v2 = p1 - offset;
+                            sf::Vector2f v3 = p2 - offset;
+                            sf::Vector2f v4 = p2 + offset;
+
+                            line_thick.append(sf::Vertex(v1, line->mFillColor));
+                            line_thick.append(sf::Vertex(v2, line->mFillColor));
+                            line_thick.append(sf::Vertex(v3, line->mFillColor));
+
+                            line_thick.append(sf::Vertex(v1, line->mFillColor));
+                            line_thick.append(sf::Vertex(v3, line->mFillColor));
+                            line_thick.append(sf::Vertex(v4, line->mFillColor));
+                        }
+
+                        window.draw(line_thick);
+                    }
+
+                    break;
+                }
+
                 case DrawingType::Rect: {
                     // TODO : Implement Outlines
 
@@ -626,8 +822,13 @@ namespace Orbis {
                 return;
             }
 
-            sf::Vector2f                                              pos_global = pos_panel + mPosition;
+            sf::Vector2f pos_global = pos_panel + mPosition;
+
             std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
+
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
 
             for (const auto& [id, drawing] : mDrawingsRect) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
@@ -818,6 +1019,60 @@ namespace Orbis {
             sf::Vector2f pos_drawing = pos_widget + drawing->mPosition;
 
             switch (drawing->mType) {
+                case DrawingType::Line: {
+                    auto line = std::static_pointer_cast<DrawingsLine>(drawing);
+
+                    if (line->mPoints.size() < 2) {
+                        break;
+                    }
+
+                    if (line->mThickness <= 1.0f) {
+                        sf::VertexArray curve(sf::PrimitiveType::LineStrip);
+
+                        for (const auto& point : line->mPoints) {
+                            curve.append(sf::Vertex(pos_drawing + point, line->mFillColor));
+                        }
+
+                        window.draw(curve);
+                    }
+                    else {
+                        sf::VertexArray line_thick     = sf::VertexArray(sf::PrimitiveType::Triangles);
+                        float           thickness_half = line->mThickness / 2.0f;
+
+                        for (size_t i = 0; i < line->mPoints.size() - 1; ++i) {
+                            sf::Vector2f p1 = pos_drawing + line->mPoints[i];
+                            sf::Vector2f p2 = pos_drawing + line->mPoints[i + 1];
+
+                            sf::Vector2f direction = p2 - p1;
+                            float        length    = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+                            if (length < 0.001f) {
+                                continue;
+                            }
+
+                            sf::Vector2f perpendicular = {-direction.y / length, direction.x / length};
+                            sf::Vector2f offset        = perpendicular * thickness_half;
+
+                            sf::Vector2f v1 = p1 + offset;
+                            sf::Vector2f v2 = p1 - offset;
+                            sf::Vector2f v3 = p2 - offset;
+                            sf::Vector2f v4 = p2 + offset;
+
+                            line_thick.append(sf::Vertex(v1, line->mFillColor));
+                            line_thick.append(sf::Vertex(v2, line->mFillColor));
+                            line_thick.append(sf::Vertex(v3, line->mFillColor));
+
+                            line_thick.append(sf::Vertex(v1, line->mFillColor));
+                            line_thick.append(sf::Vertex(v3, line->mFillColor));
+                            line_thick.append(sf::Vertex(v4, line->mFillColor));
+                        }
+
+                        window.draw(line_thick);
+                    }
+
+                    break;
+                }
+
                 case DrawingType::Rect: {
                     auto rect = std::static_pointer_cast<DrawingsRect>(drawing);
 
@@ -847,6 +1102,7 @@ namespace Orbis {
 
                         window.draw(shape);
                     }
+
                     break;
                 }
 
@@ -1140,6 +1396,10 @@ namespace Orbis {
 
             std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
 
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
             for (const auto& [id, drawing] : mDrawingsRect) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
@@ -1385,6 +1645,17 @@ namespace Orbis {
         template <typename U = WT>
         std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetHandleColor(SliderState state, sf::Color color) {
             static_cast<Slider*>(mWidget.get())->SetHandleColor(state, color);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawLine(
+            const std::string&               id,
+            const std::vector<sf::Vector2f>& points,
+            size_t                           zlevel,
+            sf::Color                        color,
+            float                            thickness) {
+            mWidget->DrawLine(id, points, zlevel, color, thickness);
 
             return *this;
         }

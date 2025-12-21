@@ -4,7 +4,7 @@ using namespace Orbis;
 
 int main() {
     sf::Vector2f     screen_size({800, 800});
-    sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Button Test", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode({static_cast<uint32_t>(screen_size.x), static_cast<uint32_t>(screen_size.y)}), "Slider Test", sf::Style::Default);
 
     window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(false);
