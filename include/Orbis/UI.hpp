@@ -33,6 +33,44 @@ namespace Orbis {
         RightBottom,
     };
 
+    enum class WidgetType {
+        Canvas,
+        Button,
+        Slider,
+    };
+
+    enum class ButtonState {
+        Normal,
+        Hover,
+        Pressed,
+    };
+
+    enum class SliderState {
+        Normal,
+        Hover,
+        Dragging,
+    };
+
+    class Drawings;
+    class DrawingsLine;
+    class DrawingsRect;
+    class DrawingsText;
+    class DrawingsTexture;
+
+    class Widget;
+    class Canvas;
+    class Button;
+    class Slider;
+    class Panel;
+
+    template <typename WT>
+    class WidgetHandle;
+    class PanelHandle;
+    class UIContext;
+    class UI;
+} // namespace Orbis
+
+namespace Orbis {
     class Drawings {
     public:
         DrawingType  mType;
@@ -74,41 +112,7 @@ namespace Orbis {
         sf::Vector2f                 mSize;
         bool                         mTextureSmoothing;
     };
-} // namespace Orbis
 
-namespace Orbis {
-    enum class WidgetType {
-        Canvas,
-        Button,
-        Slider,
-    };
-
-    enum class ButtonState {
-        Normal,
-        Hover,
-        Pressed,
-    };
-
-    enum class SliderState {
-        Normal,
-        Hover,
-        Dragging,
-    };
-
-    class Widget;
-    class Canvas;
-    class Button;
-    class Slider;
-    class Panel;
-
-    template <typename WT>
-    class WidgetHandle;
-    class PanelHandle;
-    class UIContext;
-    class UI;
-} // namespace Orbis
-
-namespace Orbis {
     class Widget : public std::enable_shared_from_this<Widget> {
     protected:
         sf::Vector2f mSize      = {0, 0};

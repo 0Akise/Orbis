@@ -11,6 +11,7 @@ int main() {
     window.setVerticalSyncEnabled(false);
 
     UI::Initialize();
+
     UIContext context = UI::CreateContext();
     UI::Bind(window, context);
 
