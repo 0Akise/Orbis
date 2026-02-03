@@ -10,15 +10,15 @@
 namespace Orbis {
     class ResourceVault {
     private:
-        std::unordered_map<std::string, std::shared_ptr<sf::Font>> mFonts;
+        std::unordered_map<std::string, std::shared_ptr<sf::Font>>    mFonts;
         std::unordered_map<std::string, std::shared_ptr<sf::Texture>> mTextures;
 
     public:
         ResourceVault() = default;
 
         std::shared_ptr<sf::Font> LoadFont(const std::string& path) {
-            std::string key = path;
-            auto iter = mFonts.find(key);
+            std::string key  = path;
+            auto        iter = mFonts.find(key);
 
             if (iter != mFonts.end()) {
                 return iter->second;
@@ -37,8 +37,8 @@ namespace Orbis {
 
         std::shared_ptr<sf::Texture> LoadTexture(
             const std::string& path,
-            bool srgb_enabled = false,
-            const sf::IntRect& area = sf::IntRect()) {
+            bool               srgb_enabled = false,
+            const sf::IntRect& area         = sf::IntRect()) {
             std::string key = path;
 
             if (area != sf::IntRect()) {
@@ -82,4 +82,4 @@ namespace Orbis {
             ClearTextures();
         }
     };
-}
+} // namespace Orbis
