@@ -1,4 +1,4 @@
-#pragma once;
+#pragma once
 
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/UI/Widget.hpp"
@@ -489,7 +489,7 @@ namespace Orbis {
             bool is_track_clicked  = track_bounds.contains(controls.mMouse.mPosition);
 
             if (mIsDragging == true) {
-                if (controls.mMouse.mLPress == true) {
+                if (controls.mMouse.mIsLPressed == true) {
                     float new_value = CalculateValueFromPos(controls.mMouse.mPosition, pos_global);
 
                     if (new_value != mValue) {
@@ -508,7 +508,7 @@ namespace Orbis {
                 }
             }
             else {
-                if (controls.mMouse.mLPress == true) {
+                if (controls.mMouse.mIsLPressed == true) {
                     if (is_handle_hovered == true) {
                         mIsDragging = true;
                         mDragOffset = controls.mMouse.mPosition - (pos_global + mTrackOffset + GetHandlePosition());

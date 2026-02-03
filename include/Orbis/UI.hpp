@@ -7,6 +7,10 @@
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/System/Controls.hpp"
 #include "Orbis/System/ResourceVault.hpp"
+#include "Orbis/UI/Button.hpp"
+#include "Orbis/UI/Canvas.hpp"
+#include "Orbis/UI/Slider.hpp"
+#include "Orbis/UI/Textbox.hpp"
 #include "Orbis/UI/Widget.hpp"
 
 namespace Orbis {
@@ -252,6 +256,14 @@ namespace Orbis {
             return *this;
         }
 
+        // TextboxSingle
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetCallback(std::function<void()> callback) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetCallback(callback);
+
+            return *this;
+        }
+
         WidgetHandle& DrawLine(
             const std::string&               id,
             const std::vector<sf::Vector2f>& points,
@@ -414,6 +426,8 @@ namespace Orbis {
     private:
         ResourceVault                                     mResourceVault;
         std::unordered_map<sf::RenderWindow*, UIContext*> mWindowToContext;
+        std::unordered_map<sf::RenderWindow*, Mouse>      mMouseBuffers;
+        std::unordered_map<sf::RenderWindow*, Keyboard>   mKeyboardBuffers;
 
         static UI& GetInstance() {
             static UI instance;
@@ -483,6 +497,107 @@ namespace Orbis {
             context->ShowPanelList();
         }
 
+        static void ProcessEvent(sf::RenderWindow& window, const sf::Event& event) {
+            auto& instance = GetInstance();
+
+            auto iter_kb = instance.mKeyboardBuffers.find(&window);
+
+            if (iter_kb == instance.mKeyboardBuffers.end()) {
+                instance.mKeyboardBuffers[&window] = Keyboard();
+
+                iter_kb = instance.mKeyboardBuffers.find(&window);
+            }
+
+            Keyboard& keyboard = iter_kb->second;
+
+            if (const auto* text_entered = event.getIf<sf::Event::TextEntered>()) {
+                keyboard.mTextEntered += text_entered->unicode;
+            }
+            else if (const auto* key_pressed = event.getIf<sf::Event::KeyPressed>()) {
+                keyboard.mKeysPressed.push_back(key_pressed->code);
+
+                keyboard.mIsCPressed = key_pressed->control;
+                keyboard.mIsSPressed = key_pressed->shift;
+                keyboard.mIsAPressed = key_pressed->alt;
+            }
+            else if (const auto* key_released = event.getIf<sf::Event::KeyReleased>()) {
+                keyboard.mKeysReleased.push_back(key_pressed->code);
+
+                keyboard.mIsCPressed = key_released->control;
+                keyboard.mIsSPressed = key_released->shift;
+                keyboard.mIsAPressed = key_released->alt;
+            }
+
+            auto iter_m = instance.mMouseBuffers.find(&window);
+
+            if (iter_m == instance.mMouseBuffers.end()) {
+                instance.mMouseBuffers[&window] = Mouse();
+
+                iter_m = instance.mMouseBuffers.find(&window);
+            }
+
+            Mouse& mouse = iter_m->second;
+
+            if (const auto* mouse_pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
+                mouse.mButtonsPressed.push_back(mouse_pressed->button);
+
+                switch (mouse_pressed->button) {
+                    case sf::Mouse::Button::Left: {
+                        mouse.mIsLPressed = true;
+                        break;
+                    }
+                    case sf::Mouse::Button::Right: {
+                        mouse.mIsRPressed = true;
+                        break;
+                    }
+                    case sf::Mouse::Button::Middle: {
+                        mouse.mIsWPressed = true;
+                        break;
+                    }
+                    case sf::Mouse::Button::Extra1: {
+                        mouse.mIsE1Pressed = true;
+                        break;
+                    }
+                    case sf::Mouse::Button::Extra2: {
+                        mouse.mIsE2Pressed = true;
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+            }
+            else if (const auto* mouse_released = event.getIf<sf::Event::MouseButtonReleased>()) {
+                mouse.mButtonsReleased.push_back(mouse_released->button);
+
+                switch (mouse_released->button) {
+                    case sf::Mouse::Button::Left: {
+                        mouse.mIsLPressed = false;
+                        break;
+                    }
+                    case sf::Mouse::Button::Right: {
+                        mouse.mIsRPressed = false;
+                        break;
+                    }
+                    case sf::Mouse::Button::Middle: {
+                        mouse.mIsWPressed = false;
+                        break;
+                    }
+                    case sf::Mouse::Button::Extra1: {
+                        mouse.mIsE1Pressed = false;
+                        break;
+                    }
+                    case sf::Mouse::Button::Extra2: {
+                        mouse.mIsE2Pressed = false;
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+            }
+        }
+
         static void Update(sf::RenderWindow& window) {
             auto& instance = GetInstance();
             auto  iter     = instance.mWindowToContext.find(&window);
@@ -492,13 +607,12 @@ namespace Orbis {
             }
 
             UIContext* context = iter->second;
-
-            Controls controls;
+            Controls   controls;
             controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
             controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
-            controls.mMouse.mLPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-            controls.mMouse.mRPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
-            controls.mMouse.mWPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+            controls.mMouse             = instance.mMouseBuffers[&window];
+
+            instance.mMouseBuffers[&window].ClearFrameEvents();
 
             context->Update(controls);
         }

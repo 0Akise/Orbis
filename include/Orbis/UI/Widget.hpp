@@ -1,4 +1,4 @@
-#pragma once;
+#pragma once
 
 #include <map>
 #include <memory>
@@ -14,7 +14,7 @@ namespace Orbis {
     class Button;
     class Slider;
     class TextboxSingle;
-    class TextboxMultiLine;
+    class TextboxMulti;
     class Panel;
 
     class Widget : public std::enable_shared_from_this<Widget> {

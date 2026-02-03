@@ -1,4 +1,4 @@
-#pragma once;
+#pragma once
 
 namespace Orbis {
     enum class DrawingType {
@@ -24,6 +24,8 @@ namespace Orbis {
         Canvas,
         Button,
         Slider,
+        TextboxSingle,
+        TextboxMulti,
     };
 
     enum class ButtonState {

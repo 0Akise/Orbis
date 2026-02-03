@@ -1,4 +1,4 @@
-#pragma once;
+#pragma once
 
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/UI/Widget.hpp"
@@ -272,7 +272,7 @@ namespace Orbis {
             bool is_hovered = bounds.contains(controls.mMouse.mPosition);
 
             if (is_hovered == true) {
-                if (controls.mMouse.mLPress == true) {
+                if (controls.mMouse.mIsLPressed == true) {
                     mState      = ButtonState::Pressed;
                     mWasPressed = true;
                 }
@@ -291,7 +291,7 @@ namespace Orbis {
             else {
                 mState = ButtonState::Normal;
 
-                if (controls.mMouse.mLPress == false) {
+                if (controls.mMouse.mIsLPressed == false) {
                     mWasPressed = false;
                 }
             }

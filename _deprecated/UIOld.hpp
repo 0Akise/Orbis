@@ -95,9 +95,9 @@ namespace Orbis {
         void Update(sf::RenderWindow& window) {
             mControls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
             mControls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
-            mControls.mMouse.mLPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-            mControls.mMouse.mRPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
-            mControls.mMouse.mWPress     = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+            mControls.mMouse.mIsLPressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            mControls.mMouse.mIsRPressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
+            mControls.mMouse.mIsWPressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
 
             for (auto& panel : mPanels) {
                 panel->Update(mControls);

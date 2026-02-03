@@ -1,4 +1,4 @@
-#pragma once;
+#pragma once
 
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/UI/Widget.hpp"
