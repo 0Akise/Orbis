@@ -608,6 +608,7 @@ namespace Orbis {
 
             UIContext* context = iter->second;
             Controls   controls;
+
             controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
             controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
             controls.mMouse             = instance.mMouseBuffers[&window];
