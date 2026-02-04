@@ -120,7 +120,7 @@ int main() {
         .SetHandleColor(SliderState::Normal, sf::Color(200, 200, 200, 255))
         .SetHandleColor(SliderState::Hover, sf::Color(220, 220, 220, 255))
         .SetHandleColor(SliderState::Dragging, sf::Color(150, 150, 255, 255))
-        .SetCallback([&dot_position, &dot_coords, &get_curve_position](float value) {
+        .SetOnValueChanged([&dot_position, &dot_coords, &get_curve_position](float value) {
             dot_position = value;
             dot_coords   = get_curve_position(value);
         });

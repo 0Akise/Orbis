@@ -39,4 +39,16 @@ namespace Orbis {
         Hover,
         Dragging,
     };
+
+    enum class TextboxState {
+        Normal,
+        Hover,
+        Focused,
+    };
+
+    enum class CursorStyle {
+        Line,
+        Block,
+        Custom,
+    };
 } // namespace Orbis

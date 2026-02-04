@@ -167,8 +167,8 @@ namespace Orbis {
 
         // Button
         template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetCallback(std::function<void()> callback) {
-            static_cast<Button*>(mWidget.get())->SetCallback(callback);
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetOnButtonPressed(std::function<void()> callback) {
+            static_cast<Button*>(mWidget.get())->SetOnButtonPressed(callback);
 
             return *this;
         }
@@ -215,8 +215,8 @@ namespace Orbis {
         }
 
         template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetCallback(std::function<void(float)> callback) {
-            static_cast<Slider*>(mWidget.get())->SetCallback(callback);
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetOnValueChanged(std::function<void(float)> callback) {
+            static_cast<Slider*>(mWidget.get())->SetOnValueChanged(callback);
 
             return *this;
         }
@@ -258,8 +258,15 @@ namespace Orbis {
 
         // TextboxSingle
         template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetCallback(std::function<void()> callback) {
-            static_cast<TextboxSingle*>(mWidget.get())->SetCallback(callback);
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnTextChanged(std::function<void(const sf::String&)> callback) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetOnTextChanged(callback);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnEnterPressed(std::function<void()> callback) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetOnEnterPressed(callback);
 
             return *this;
         }
@@ -521,7 +528,7 @@ namespace Orbis {
                 keyboard.mIsAPressed = key_pressed->alt;
             }
             else if (const auto* key_released = event.getIf<sf::Event::KeyReleased>()) {
-                keyboard.mKeysReleased.push_back(key_pressed->code);
+                keyboard.mKeysReleased.push_back(key_released->code);
 
                 keyboard.mIsCPressed = key_released->control;
                 keyboard.mIsSPressed = key_released->shift;
@@ -612,8 +619,10 @@ namespace Orbis {
             controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
             controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
             controls.mMouse             = instance.mMouseBuffers[&window];
+            controls.mKeyboard          = instance.mKeyboardBuffers[&window];
 
             instance.mMouseBuffers[&window].ClearFrameEvents();
+            instance.mKeyboardBuffers[&window].ClearFrameEvents();
 
             context->Update(controls);
         }

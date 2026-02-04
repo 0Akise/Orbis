@@ -1,12 +1,14 @@
 #pragma once
 
+#include <functional>
+
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/UI/Widget.hpp"
 
 namespace Orbis {
     class Button : public Widget {
     private:
-        std::function<void()> mCallback;
+        std::function<void()> mOnButtonPressed;
 
         ButtonState mState = ButtonState::Normal;
 
@@ -197,8 +199,8 @@ namespace Orbis {
             }
         }
 
-        Button& SetCallback(std::function<void()> callback) {
-            mCallback = std::move(callback);
+        Button& SetOnButtonPressed(std::function<void()> callback) {
+            mOnButtonPressed = std::move(callback);
 
             return *this;
         }
@@ -235,10 +237,10 @@ namespace Orbis {
             cloned->mZLevel    = mZLevel;
             cloned->mIsVisible = mIsVisible;
 
-            cloned->mCallback     = mCallback;
-            cloned->mColorNormal  = mColorNormal;
-            cloned->mColorHover   = mColorHover;
-            cloned->mColorPressed = mColorPressed;
+            cloned->mOnButtonPressed = mOnButtonPressed;
+            cloned->mColorNormal     = mColorNormal;
+            cloned->mColorHover      = mColorHover;
+            cloned->mColorPressed    = mColorPressed;
 
             cloned->mState      = ButtonState::Normal;
             cloned->mWasPressed = false;
@@ -278,8 +280,8 @@ namespace Orbis {
                 }
                 else {
                     if (mWasPressed == true) {
-                        if (mCallback) {
-                            mCallback();
+                        if (mOnButtonPressed) {
+                            mOnButtonPressed();
                         }
 
                         mWasPressed = false;

@@ -41,7 +41,7 @@ int main() {
         .SetValue(128.0f)
         .SetStepSize(1.0f)
         .SetFillColor(sf::Color(255, 100, 100, 255))
-        .SetCallback([&mixed_color, &canvas_color_preview](float value) {
+        .SetOnValueChanged([&mixed_color, &canvas_color_preview](float value) {
             mixed_color.r      = static_cast<std::uint8_t>(value);
             auto& preview      = canvas_color_preview.GetRect("preview");
             preview.mFillColor = mixed_color;
@@ -54,7 +54,7 @@ int main() {
         .SetValue(128.0f)
         .SetStepSize(1.0f)
         .SetFillColor(sf::Color(100, 255, 100, 255))
-        .SetCallback([&mixed_color, &canvas_color_preview](float value) {
+        .SetOnValueChanged([&mixed_color, &canvas_color_preview](float value) {
             mixed_color.g      = static_cast<std::uint8_t>(value);
             auto& preview      = canvas_color_preview.GetRect("preview");
             preview.mFillColor = mixed_color;
@@ -67,7 +67,7 @@ int main() {
         .SetValue(128.0f)
         .SetStepSize(1.0f)
         .SetFillColor(sf::Color(100, 100, 255, 255))
-        .SetCallback([&mixed_color, &canvas_color_preview](float value) {
+        .SetOnValueChanged([&mixed_color, &canvas_color_preview](float value) {
             mixed_color.b      = static_cast<std::uint8_t>(value);
             auto& preview      = canvas_color_preview.GetRect("preview");
             preview.mFillColor = mixed_color;

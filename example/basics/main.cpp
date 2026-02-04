@@ -101,7 +101,7 @@ int main() {
         .SetStateColor(ButtonState::Normal, sf::Color(100, 150, 255, 255))
         .SetStateColor(ButtonState::Hover, sf::Color(120, 170, 255, 255))
         .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 255))
-        .SetCallback([&player, &hp_anim]() {
+        .SetOnButtonPressed([&player, &hp_anim]() {
             player.mHealthCurrent = std::min(player.mHealthMax, player.mHealthCurrent + 10);
             hp_anim.mIsAnimating = true;
             hp_anim.mStartTime = std::chrono::steady_clock::now();
@@ -116,7 +116,7 @@ int main() {
         .SetStateColor(ButtonState::Normal, sf::Color(100, 150, 255, 255))
         .SetStateColor(ButtonState::Hover, sf::Color(120, 170, 255, 255))
         .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 255))
-        .SetCallback([&player, &hp_anim]() {
+        .SetOnButtonPressed([&player, &hp_anim]() {
             player.mHealthCurrent = std::max(0, player.mHealthCurrent - 10);
             hp_anim.mIsAnimating = true;
             hp_anim.mStartTime = std::chrono::steady_clock::now();
@@ -131,7 +131,7 @@ int main() {
         .SetStateColor(ButtonState::Normal, sf::Color(100, 150, 255, 255))
         .SetStateColor(ButtonState::Hover, sf::Color(120, 170, 255, 255))
         .SetStateColor(ButtonState::Pressed, sf::Color(80, 130, 235, 255))
-        .SetCallback([&window]() {
+        .SetOnButtonPressed([&window]() {
             window.close();
         })
         .DrawRect("button_exit_rect", {25, 25}, {0, 0}, 0, sf::Color::Black);
@@ -170,12 +170,12 @@ int main() {
         .AddWidget(button_styled
                        .Clone() // Clone to make a button independent!
                        .SetPosition({140, 25})
-                       .SetCallback([]() { /* Some callback */ })
+                       .SetOnButtonPressed([]() { /* Some callback */ })
                        .DrawText("btn_text1", 15, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "AAA"))
         .AddWidget(button_styled
                        .Clone()
                        .SetPosition({140, 100})
-                       .SetCallback([]() { /* Some callback */ })
+                       .SetOnButtonPressed([]() { /* Some callback */ })
                        .DrawText("btn_text2", 15, {50, 25}, 20, sf::Color::Black, font_basic, TextAlign::Center, "BBB"))
         .AddWidget(button_exit)
         .Register(context);

@@ -6,7 +6,7 @@
 namespace Orbis {
     class Slider : public Widget {
     private:
-        std::function<void(float)> mCallback;
+        std::function<void(float)> mOnValueChanged;
 
         float mValueMin = 0.0f;
         float mValueMax = 1.0f;
@@ -354,8 +354,8 @@ namespace Orbis {
             return *this;
         }
 
-        Slider& SetCallback(std::function<void(float)> callback) {
-            mCallback = std::move(callback);
+        Slider& SetOnValueChanged(std::function<void(float)> callback) {
+            mOnValueChanged = std::move(callback);
 
             return *this;
         }
@@ -431,12 +431,12 @@ namespace Orbis {
             cloned->mZLevel    = mZLevel;
             cloned->mIsVisible = mIsVisible;
 
-            cloned->mValueMin     = mValueMin;
-            cloned->mValueMax     = mValueMax;
-            cloned->mValue        = mValue;
-            cloned->mStepSize     = mStepSize;
-            cloned->mIsHorizontal = mIsHorizontal;
-            cloned->mCallback     = mCallback;
+            cloned->mValueMin       = mValueMin;
+            cloned->mValueMax       = mValueMax;
+            cloned->mValue          = mValue;
+            cloned->mStepSize       = mStepSize;
+            cloned->mIsHorizontal   = mIsHorizontal;
+            cloned->mOnValueChanged = mOnValueChanged;
 
             cloned->mHandleSize          = mHandleSize;
             cloned->mHandleRadius        = mHandleRadius;
@@ -495,8 +495,8 @@ namespace Orbis {
                     if (new_value != mValue) {
                         mValue = new_value;
 
-                        if (mCallback) {
-                            mCallback(mValue);
+                        if (mOnValueChanged) {
+                            mOnValueChanged(mValue);
                         }
                     }
 
@@ -520,8 +520,8 @@ namespace Orbis {
                         if (new_value != mValue) {
                             mValue = new_value;
 
-                            if (mCallback) {
-                                mCallback(mValue);
+                            if (mOnValueChanged) {
+                                mOnValueChanged(mValue);
                             }
                         }
 
