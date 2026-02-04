@@ -5,6 +5,7 @@ namespace Orbis {
         Line,
         Rect,
         Text,
+        WText,
         Texture,
     };
 

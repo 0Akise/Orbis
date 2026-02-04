@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <Orbis/UI.hpp>
 #include <Orbis/Utils.hpp>
 
@@ -180,15 +178,8 @@ int main() {
         .AddWidget(button_exit)
         .Register(context);
 
-    // for debugging purpose, you can list up panels in console/terminal.
-    UI::ShowPanelList(window);
-
     // SFML Main Game Loop
     while (window.isOpen()) {
-        // Be sure to update the UI at the START of the game loop.
-        // NOTICE - UI::Update() and UI::Render() uses window, not a context!
-        UI::Update(window);
-
         // SFML Game Event Loop
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>() == true) {
@@ -198,7 +189,12 @@ int main() {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape) == true) {
                 window.close();
             }
+
+            UI::ProcessEvent(window, *event);
         }
+        // Be sure to update the UI at the START of the game loop.
+        // NOTICE - UI::Update() and UI::Render() uses window, not a context!
+        UI::Update(window);
 
         if (hp_anim.mIsAnimating == true) {
             hp_anim.mCurrent = Utils::SmoothLerp(hp_anim.mFrom, hp_anim.mTo, hp_anim.mStartTime, hp_anim.mDuration);
@@ -212,7 +208,6 @@ int main() {
             hud_hp_bar.mSize  = {310 * hp_anim.mCurrent, 28};
             hud_hp_text.mText = std::to_string(player.mHealthCurrent);
         }
-
         // Be sure to call UI::Render() after cleaning up the window!
         window.clear();
 

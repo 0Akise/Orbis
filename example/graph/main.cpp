@@ -143,8 +143,6 @@ int main() {
     auto& label_slope = canvas_label.GetText("label_slope");
 
     while (window.isOpen()) {
-        UI::Update(window);
-
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>() == true) {
                 window.close();
@@ -153,7 +151,11 @@ int main() {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape) == true) {
                 window.close();
             }
+
+            UI::ProcessEvent(window, *event);
         }
+
+        UI::Update(window);
 
         float x_current      = get_actual_x(dot_position);
         float y_current      = target(x_current);

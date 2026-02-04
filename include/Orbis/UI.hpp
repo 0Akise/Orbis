@@ -114,7 +114,7 @@ namespace Orbis {
     };
 
     class Scene {
-        // TODO
+        // TODO: Cluster of Panels with scene management
     };
 
     template <typename WT>
@@ -308,6 +308,20 @@ namespace Orbis {
             TextAlign                 align = TextAlign::LeftTop,
             const std::string&        text  = "") {
             mWidget->DrawText(id, font_size, position, zlevel, fill_color, font, align, text);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawWText(
+            const std::string&        id,
+            size_t                    font_size,
+            sf::Vector2f              position,
+            size_t                    zlevel,
+            sf::Color                 fill_color,
+            std::shared_ptr<sf::Font> font,
+            TextAlign                 align = TextAlign::LeftTop,
+            const std::wstring&       wtext = L"") {
+            mWidget->DrawWText(id, font_size, position, zlevel, fill_color, font, align, wtext);
 
             return *this;
         }

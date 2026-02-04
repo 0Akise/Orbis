@@ -94,8 +94,6 @@ int main() {
         .Register(context);
 
     while (window.isOpen()) {
-        UI::Update(window);
-
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>() == true) {
                 window.close();
@@ -104,7 +102,10 @@ int main() {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape) == true) {
                 window.close();
             }
+
+            UI::ProcessEvent(window, *event);
         }
+        UI::Update(window);
 
         window.clear();
 

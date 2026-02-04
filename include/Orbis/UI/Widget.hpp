@@ -1,5 +1,8 @@
 #pragma once
 
+#include <chrono>
+#include <cmath>
+#include <functional>
 #include <map>
 #include <memory>
 
@@ -27,6 +30,7 @@ namespace Orbis {
         std::map<std::string, std::shared_ptr<DrawingsLine>>    mDrawingsLine;
         std::map<std::string, std::shared_ptr<DrawingsRect>>    mDrawingsRect;
         std::map<std::string, std::shared_ptr<DrawingsText>>    mDrawingsText;
+        std::map<std::string, std::shared_ptr<DrawingsWText>>   mDrawingsWText;
         std::map<std::string, std::shared_ptr<DrawingsTexture>> mDrawingsTexture;
 
     public:
@@ -178,6 +182,32 @@ namespace Orbis {
             return *this;
         }
 
+        Widget& DrawWText(
+            const std::string&        id,
+            size_t                    font_size,
+            sf::Vector2f              position,
+            size_t                    zlevel,
+            sf::Color                 fill_color,
+            std::shared_ptr<sf::Font> font,
+            TextAlign                 align = TextAlign::LeftTop,
+            const std::wstring&       wtext = L"") {
+            auto drawing = std::make_shared<DrawingsWText>();
+
+            drawing->mType      = DrawingType::WText;
+            drawing->mID        = id;
+            drawing->mFontSize  = font_size;
+            drawing->mPosition  = position;
+            drawing->mZLevel    = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mFont      = font;
+            drawing->mAlign     = align;
+            drawing->mWText     = wtext;
+
+            mDrawingsWText[id] = drawing;
+
+            return *this;
+        }
+
         Widget& DrawTexture(
             const std::string&           id,
             sf::Vector2f                 size,
@@ -185,7 +215,7 @@ namespace Orbis {
             size_t                       zlevel,
             sf::Color                    fill_color,
             std::shared_ptr<sf::Texture> texture,
-            bool                         smoothing_enabled = true) {
+            bool                         smoothing_enabled = false) {
             auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType             = DrawingType::Texture;

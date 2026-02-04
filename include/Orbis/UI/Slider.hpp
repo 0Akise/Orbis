@@ -290,6 +290,38 @@ namespace Orbis {
                     break;
                 }
 
+                case DrawingType::WText: {
+                    auto          text_drawing = std::static_pointer_cast<DrawingsWText>(drawing);
+                    sf::Text      text(*text_drawing->mFont, text_drawing->mWText, text_drawing->mFontSize);
+                    sf::FloatRect bounds = text.getLocalBounds();
+                    sf::Vector2f  offset = {0, 0};
+
+                    float offset_x = 0.0f;
+                    float offset_y = 0.0f;
+
+                    if (text_drawing->mAlign == TextAlign::CenterTop || text_drawing->mAlign == TextAlign::Center || text_drawing->mAlign == TextAlign::CenterBottom) {
+                        offset_x = -(bounds.size.x) / 2.0f;
+                    }
+                    else if (text_drawing->mAlign == TextAlign::RightTop || text_drawing->mAlign == TextAlign::RightCenter || text_drawing->mAlign == TextAlign::RightBottom) {
+                        offset_x = -(bounds.size.x);
+                    }
+
+                    if (text_drawing->mAlign == TextAlign::LeftCenter || text_drawing->mAlign == TextAlign::Center || text_drawing->mAlign == TextAlign::RightCenter) {
+                        offset_y = -(static_cast<float>(text_drawing->mFontSize)) / 2.0f;
+                    }
+                    else if (text_drawing->mAlign == TextAlign::LeftBottom || text_drawing->mAlign == TextAlign::CenterBottom || text_drawing->mAlign == TextAlign::RightBottom) {
+                        offset_y = -(static_cast<float>(text_drawing->mFontSize));
+                    }
+
+                    offset = {offset_x, offset_y};
+
+                    text.setPosition(pos_drawing + offset);
+                    text.setFillColor(text_drawing->mFillColor);
+                    window.draw(text);
+
+                    break;
+                }
+
                 case DrawingType::Texture: {
                     auto               texture = std::static_pointer_cast<DrawingsTexture>(drawing);
                     sf::RectangleShape shape(texture->mSize);
@@ -426,34 +458,30 @@ namespace Orbis {
         std::shared_ptr<Widget> CloneImpl() const override {
             auto cloned = std::make_shared<Slider>();
 
-            cloned->mSize      = mSize;
-            cloned->mPosition  = mPosition;
-            cloned->mZLevel    = mZLevel;
-            cloned->mIsVisible = mIsVisible;
-
-            cloned->mValueMin       = mValueMin;
-            cloned->mValueMax       = mValueMax;
-            cloned->mValue          = mValue;
-            cloned->mStepSize       = mStepSize;
-            cloned->mIsHorizontal   = mIsHorizontal;
-            cloned->mOnValueChanged = mOnValueChanged;
-
+            cloned->mSize                = mSize;
+            cloned->mPosition            = mPosition;
+            cloned->mZLevel              = mZLevel;
+            cloned->mIsVisible           = mIsVisible;
+            cloned->mValueMin            = mValueMin;
+            cloned->mValueMax            = mValueMax;
+            cloned->mValue               = mValue;
+            cloned->mStepSize            = mStepSize;
+            cloned->mIsHorizontal        = mIsHorizontal;
+            cloned->mOnValueChanged      = mOnValueChanged;
             cloned->mHandleSize          = mHandleSize;
             cloned->mHandleRadius        = mHandleRadius;
             cloned->mHandleRounded       = mHandleRounded;
             cloned->mHandleColorNormal   = mHandleColorNormal;
             cloned->mHandleColorHover    = mHandleColorHover;
             cloned->mHandleColorDragging = mHandleColorDragging;
-
-            cloned->mTrackSize   = mTrackSize;
-            cloned->mTrackOffset = mTrackOffset;
-            cloned->mTrackColor  = mTrackColor;
-            cloned->mShowFill    = mShowFill;
-            cloned->mFillColor   = mFillColor;
-
-            cloned->mState      = SliderState::Normal;
-            cloned->mIsDragging = false;
-            cloned->mDragOffset = {0.0f, 0.0f};
+            cloned->mTrackSize           = mTrackSize;
+            cloned->mTrackOffset         = mTrackOffset;
+            cloned->mTrackColor          = mTrackColor;
+            cloned->mShowFill            = mShowFill;
+            cloned->mFillColor           = mFillColor;
+            cloned->mState               = SliderState::Normal;
+            cloned->mIsDragging          = false;
+            cloned->mDragOffset          = {0.0f, 0.0f};
 
             for (const auto& [id, drawing] : mDrawingsRect) {
                 auto cloned_drawing = std::make_shared<DrawingsRect>(*drawing);

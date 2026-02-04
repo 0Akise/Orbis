@@ -48,6 +48,14 @@ namespace Orbis {
         TextAlign                 mAlign;
     };
 
+    class DrawingsWText : public Drawings {
+    public:
+        std::shared_ptr<sf::Font> mFont;
+        size_t                    mFontSize;
+        std::wstring              mWText;
+        TextAlign                 mAlign;
+    };
+
     class DrawingsTexture : public Drawings {
     public:
         std::shared_ptr<sf::Texture> mTexture;
