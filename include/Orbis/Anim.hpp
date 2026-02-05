@@ -127,15 +127,6 @@ namespace Orbis {
             mEasingFunc = easing_func;
         }
 
-        void Start(sf::Vector2f start, sf::Vector2f target, float duration, std::function<void()> on_complete = nullptr) {
-            mIsActive   = true;
-            mStartTime  = std::chrono::steady_clock::now();
-            mDuration   = duration;
-            mStartPos   = start;
-            mTargetPos  = target;
-            mOnComplete = std::move(on_complete);
-        }
-
         bool IsComplete() const {
             if (mIsActive == false) {
                 return false;
@@ -143,7 +134,7 @@ namespace Orbis {
 
             auto now = std::chrono::steady_clock::now();
 
-            return Anim::GetElapsedSeconds(mStartTime, now) >= mDuration;
+            return mDuration <= Anim::GetElapsedSeconds(mStartTime, now);
         }
 
         sf::Vector2f GetCurrentPosition() const {
@@ -157,6 +148,58 @@ namespace Orbis {
             t = mEasingFunc(t);
 
             return Anim::LerpVector(mStartPos, mTargetPos, t);
+        }
+
+        void Start(sf::Vector2f start, sf::Vector2f target, float duration, std::function<void()> on_complete = nullptr) {
+            mIsActive   = true;
+            mStartTime  = std::chrono::steady_clock::now();
+            mDuration   = duration;
+            mStartPos   = start;
+            mTargetPos  = target;
+            mOnComplete = std::move(on_complete);
+        }
+    };
+
+    class DelayedCallback {
+    private:
+        typedef std::chrono::steady_clock::time_point TimePoint;
+
+        bool                  mIsActive = false;
+        TimePoint             mStartTime;
+        float                 mDelay    = 0.0f;
+        std::function<void()> mCallback = nullptr;
+
+    public:
+        bool IsActive() const {
+            return mIsActive;
+        }
+
+        void Start(float delay_seconds, std::function<void()> callback) {
+            mIsActive  = true;
+            mStartTime = std::chrono::steady_clock::now();
+            mDelay     = delay_seconds;
+            mCallback  = std::move(callback);
+        }
+
+        void Update() {
+            if (mIsActive == false) {
+                return;
+            }
+
+            auto  now     = std::chrono::steady_clock::now();
+            float elapsed = Anim::GetElapsedSeconds(mStartTime, now);
+
+            if (elapsed >= mDelay) {
+                if (mCallback) {
+                    mCallback();
+                }
+
+                mIsActive = false;
+            }
+        }
+
+        void Cancel() {
+            mIsActive = false;
         }
     };
 } // namespace Orbis

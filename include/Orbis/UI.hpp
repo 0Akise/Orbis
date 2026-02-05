@@ -265,6 +265,12 @@ namespace Orbis {
             return *this;
         }
 
+        WidgetHandle& ScaleAnimation(sf::Vector2f target_scale, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            mWidget->ScaleAnimation(target_scale, duration, on_complete, easing);
+
+            return *this;
+        }
+
         // Button
         template <typename U = WT>
         std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetOnButtonPressed(std::function<void()> callback) {

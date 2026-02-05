@@ -38,6 +38,7 @@ namespace Orbis {
         using ColorModifier = std::function<sf::Color(DrawingType, const sf::Color&)>;
 
         std::optional<AnimationState> mPosAnimation;
+        std::optional<AnimationState> mScaleAnimation;
 
         void RenderDrawing(sf::RenderWindow& window, const std::shared_ptr<Drawings>& drawing, sf::Vector2f pos_widget, const ColorModifier& color_modifier = nullptr) {
             sf::Vector2f pos_drawing = pos_widget + drawing->mPosition;
@@ -216,6 +217,9 @@ namespace Orbis {
                     shape.setPosition(pos_drawing);
                     shape.setTexture(texture->mTexture.get());
                     shape.setFillColor(final_color);
+                    shape.setScale(texture->mScale);
+                    shape.setOrigin({texture->mSize.x / 2.0f, texture->mSize.y / 2.0f});
+                    shape.move({texture->mSize.x / 2.0f, texture->mSize.y / 2.0f});
                     window.draw(shape);
 
                     break;
@@ -300,6 +304,27 @@ namespace Orbis {
                 }
                 else {
                     mPosition = mPosAnimation->GetCurrentPosition();
+                }
+            }
+
+            if (mScaleAnimation.has_value() == true) {
+                if (mScaleAnimation->IsComplete() == true) {
+                    for (auto& [id, texture] : mDrawingsTexture) {
+                        texture->mScale = mScaleAnimation->mTargetPos;
+                    }
+
+                    if (mScaleAnimation->mOnComplete) {
+                        mScaleAnimation->mOnComplete();
+                    }
+
+                    mScaleAnimation.reset();
+                }
+                else {
+                    sf::Vector2f current_scale = mScaleAnimation->GetCurrentPosition();
+
+                    for (auto& [id, texture] : mDrawingsTexture) {
+                        texture->mScale = current_scale;
+                    }
                 }
             }
         }
@@ -487,6 +512,23 @@ namespace Orbis {
 
         Widget& CancelAnimation() {
             mPosAnimation.reset();
+
+            return *this;
+        }
+
+        Widget& ScaleAnimation(sf::Vector2f target_scale, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            if (mScaleAnimation.has_value() == false) {
+                mScaleAnimation = AnimationState();
+            }
+
+            sf::Vector2f current_scale = {1.0f, 1.0f};
+
+            if (mDrawingsTexture.empty() == false) {
+                current_scale = mDrawingsTexture.begin()->second->mScale;
+            }
+
+            mScaleAnimation->Start(current_scale, target_scale, duration, std::move(on_complete));
+            mScaleAnimation->SetEasing(easing);
 
             return *this;
         }
