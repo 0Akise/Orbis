@@ -7,11 +7,11 @@
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/System/Controls.hpp"
 #include "Orbis/System/ResourceVault.hpp"
-#include "Orbis/UI/Button.hpp"
-#include "Orbis/UI/Canvas.hpp"
-#include "Orbis/UI/Slider.hpp"
-#include "Orbis/UI/Textbox.hpp"
-#include "Orbis/UI/Widget.hpp"
+#include "Orbis/Widgets/Button.hpp"
+#include "Orbis/Widgets/Canvas.hpp"
+#include "Orbis/Widgets/Slider.hpp"
+#include "Orbis/Widgets/Textbox.hpp"
+#include "Orbis/Widgets/Widget.hpp"
 
 namespace Orbis {
     class Panel;
@@ -20,6 +20,7 @@ namespace Orbis {
     template <typename WT>
     class WidgetHandle;
     class PanelHandle;
+    class SceneHandle;
     class UIContext;
     class UI;
 } // namespace Orbis
@@ -135,6 +136,10 @@ namespace Orbis {
 
         DrawingsText& GetText(const std::string& id) {
             return mWidget->GetText(id);
+        }
+
+        DrawingsWText& GetWText(const std::string& id) {
+            return mWidget->GetWText(id);
         }
 
         DrawingsTexture& GetTexture(const std::string& id) {
@@ -271,74 +276,38 @@ namespace Orbis {
             return *this;
         }
 
-        WidgetHandle& DrawLine(
-            const std::string&               id,
-            const std::vector<sf::Vector2f>& points,
-            size_t                           zlevel,
-            sf::Color                        color,
-            float                            thickness) {
+        // Drawings
+        WidgetHandle& DrawLine(const std::string& id, const std::vector<sf::Vector2f>& points, size_t zlevel, sf::Color color, float thickness) {
             mWidget->DrawLine(id, points, zlevel, color, thickness);
 
             return *this;
         }
 
-        WidgetHandle& DrawRect(
-            const std::string& id,
-            sf::Vector2f       size,
-            sf::Vector2f       position,
-            size_t             zlevel,
-            sf::Color          fill_color,
-            bool               is_outlined       = false,
-            float              outline_thickness = 0.0f,
-            sf::Color          outline_color     = sf::Color::Black,
-            bool               is_rounded        = false,
-            float              rounding_radius   = 0.0f) {
+        WidgetHandle& DrawRect(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, bool is_outlined = false, float outline_thickness = 0.0f, sf::Color outline_color = sf::Color::Black, bool is_rounded = false, float rounding_radius = 0.0f) {
             mWidget->DrawRect(id, size, position, zlevel, fill_color, is_outlined, outline_thickness, outline_color, is_rounded, rounding_radius);
 
             return *this;
         }
 
-        WidgetHandle& DrawText(
-            const std::string&        id,
-            size_t                    font_size,
-            sf::Vector2f              position,
-            size_t                    zlevel,
-            sf::Color                 fill_color,
-            std::shared_ptr<sf::Font> font,
-            TextAlign                 align = TextAlign::LeftTop,
-            const std::string&        text  = "") {
+        WidgetHandle& DrawText(const std::string& id, size_t font_size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Font> font, TextAlign align = TextAlign::LeftTop, const std::string& text = "") {
             mWidget->DrawText(id, font_size, position, zlevel, fill_color, font, align, text);
 
             return *this;
         }
 
-        WidgetHandle& DrawWText(
-            const std::string&        id,
-            size_t                    font_size,
-            sf::Vector2f              position,
-            size_t                    zlevel,
-            sf::Color                 fill_color,
-            std::shared_ptr<sf::Font> font,
-            TextAlign                 align = TextAlign::LeftTop,
-            const std::wstring&       wtext = L"") {
+        WidgetHandle& DrawWText(const std::string& id, size_t font_size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Font> font, TextAlign align = TextAlign::LeftTop, const std::wstring& wtext = L"") {
             mWidget->DrawWText(id, font_size, position, zlevel, fill_color, font, align, wtext);
 
             return *this;
         }
 
-        WidgetHandle& DrawTexture(
-            const std::string&           id,
-            sf::Vector2f                 size,
-            sf::Vector2f                 position,
-            size_t                       zlevel,
-            sf::Color                    fill_color,
-            std::shared_ptr<sf::Texture> texture,
-            bool                         smoothing_enabled = true) {
+        WidgetHandle& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, bool smoothing_enabled = true) {
             mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture, smoothing_enabled);
 
             return *this;
         }
 
+        // Impls
         WidgetHandle Clone() const {
             auto cloned = std::static_pointer_cast<WT>(mWidget->CloneImpl());
 
@@ -474,10 +443,7 @@ namespace Orbis {
             return GetInstance().mResourceVault.LoadFont(path);
         }
 
-        static std::shared_ptr<sf::Texture> LoadTexture(
-            const std::string& path,
-            bool               srgb_enabled = false,
-            const sf::IntRect& area         = sf::IntRect()) {
+        static std::shared_ptr<sf::Texture> LoadTexture(const std::string& path, bool srgb_enabled = false, const sf::IntRect& area = sf::IntRect()) {
             return GetInstance().mResourceVault.LoadTexture(path, srgb_enabled, area);
         }
 
@@ -499,6 +465,9 @@ namespace Orbis {
             }
             else if constexpr (Type == WidgetType::Slider) {
                 return WidgetHandle<Slider>(std::make_shared<Slider>());
+            }
+            else if constexpr (Type == WidgetType::TextboxSingle) {
+                return WidgetHandle<TextboxSingle>(std::make_shared<TextboxSingle>());
             }
             else {
                 static_assert(Type == WidgetType::Canvas || Type == WidgetType::Button, "Unknown widget type");
@@ -630,10 +599,10 @@ namespace Orbis {
             UIContext* context = iter->second;
             Controls   controls;
 
-            controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
-            controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
             controls.mMouse             = instance.mMouseBuffers[&window];
             controls.mKeyboard          = instance.mKeyboardBuffers[&window];
+            controls.mMouse.mPosition.x = static_cast<float>(sf::Mouse::getPosition(window).x);
+            controls.mMouse.mPosition.y = static_cast<float>(sf::Mouse::getPosition(window).y);
 
             instance.mMouseBuffers[&window].ClearFrameEvents();
             instance.mKeyboardBuffers[&window].ClearFrameEvents();

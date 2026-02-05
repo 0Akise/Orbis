@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Orbis/SFML/Shapes.hpp"
-#include "Orbis/UI/Widget.hpp"
+#include "Orbis/Widgets/Widget.hpp"
 
 namespace Orbis {
     class TextboxSingle : public Widget {
@@ -251,6 +251,12 @@ namespace Orbis {
             cloned->mOnTextChanged  = mOnTextChanged;
             cloned->mOnEnterPressed = mOnEnterPressed;
 
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                auto cloned_drawing = std::make_shared<DrawingsLine>(*drawing);
+
+                cloned->mDrawingsLine[id] = cloned_drawing;
+            }
+
             for (const auto& [id, drawing] : mDrawingsRect) {
                 auto cloned_drawing = std::make_shared<DrawingsRect>(*drawing);
 
@@ -261,6 +267,12 @@ namespace Orbis {
                 auto cloned_drawing = std::make_shared<DrawingsText>(*drawing);
 
                 cloned->mDrawingsText[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsWText) {
+                auto cloned_drawing = std::make_shared<DrawingsWText>(*drawing);
+
+                cloned->mDrawingsWText[id] = cloned_drawing;
             }
 
             for (const auto& [id, drawing] : mDrawingsTexture) {
@@ -404,6 +416,10 @@ namespace Orbis {
             }
 
             for (const auto& [id, drawing] : mDrawingsText) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            for (const auto& [id, drawing] : mDrawingsWText) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
 

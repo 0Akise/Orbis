@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Orbis/SFML/Shapes.hpp"
-#include "Orbis/UI/Widget.hpp"
+#include "Orbis/Widgets/Widget.hpp"
 
 namespace Orbis {
     class Slider : public Widget {
@@ -165,9 +165,9 @@ namespace Orbis {
             return sf::FloatRect(handle_pos, mHandleSize);
         }
 
-        void RenderCustomDrawings(sf::RenderWindow&                window,
-                                  const std::shared_ptr<Drawings>& drawing,
-                                  sf::Vector2f                     pos_widget) {
+        void RenderDrawings(sf::RenderWindow&                window,
+                            const std::shared_ptr<Drawings>& drawing,
+                            sf::Vector2f                     pos_widget) {
             sf::Vector2f pos_drawing = pos_widget + drawing->mPosition;
 
             switch (drawing->mType) {
@@ -224,7 +224,6 @@ namespace Orbis {
 
                     break;
                 }
-
                 case DrawingType::Rect: {
                     auto rect = std::static_pointer_cast<DrawingsRect>(drawing);
 
@@ -257,10 +256,14 @@ namespace Orbis {
 
                     break;
                 }
-
                 case DrawingType::Text: {
-                    auto          text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
-                    sf::Text      text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+                    auto text_drawing = std::static_pointer_cast<DrawingsText>(drawing);
+
+                    if (text_drawing->mCachedText.has_value() == false) {
+                        text_drawing->mCachedText = sf::Text(*text_drawing->mFont, text_drawing->mText, text_drawing->mFontSize);
+                    }
+
+                    sf::Text&     text   = text_drawing->mCachedText.value();
                     sf::FloatRect bounds = text.getLocalBounds();
                     sf::Vector2f  offset = {0, 0};
 
@@ -289,10 +292,14 @@ namespace Orbis {
 
                     break;
                 }
-
                 case DrawingType::WText: {
-                    auto          text_drawing = std::static_pointer_cast<DrawingsWText>(drawing);
-                    sf::Text      text(*text_drawing->mFont, text_drawing->mWText, text_drawing->mFontSize);
+                    auto text_drawing = std::static_pointer_cast<DrawingsWText>(drawing);
+
+                    if (text_drawing->mCachedText.has_value() == false) {
+                        text_drawing->mCachedText = sf::Text(*text_drawing->mFont, text_drawing->mWText, text_drawing->mFontSize);
+                    }
+
+                    sf::Text&     text   = text_drawing->mCachedText.value();
                     sf::FloatRect bounds = text.getLocalBounds();
                     sf::Vector2f  offset = {0, 0};
 
@@ -321,7 +328,6 @@ namespace Orbis {
 
                     break;
                 }
-
                 case DrawingType::Texture: {
                     auto               texture = std::static_pointer_cast<DrawingsTexture>(drawing);
                     sf::RectangleShape shape(texture->mSize);
@@ -483,6 +489,12 @@ namespace Orbis {
             cloned->mIsDragging          = false;
             cloned->mDragOffset          = {0.0f, 0.0f};
 
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                auto cloned_drawing = std::make_shared<DrawingsLine>(*drawing);
+
+                cloned->mDrawingsLine[id] = cloned_drawing;
+            }
+
             for (const auto& [id, drawing] : mDrawingsRect) {
                 auto cloned_drawing = std::make_shared<DrawingsRect>(*drawing);
 
@@ -493,6 +505,12 @@ namespace Orbis {
                 auto cloned_drawing = std::make_shared<DrawingsText>(*drawing);
 
                 cloned->mDrawingsText[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsWText) {
+                auto cloned_drawing = std::make_shared<DrawingsWText>(*drawing);
+
+                cloned->mDrawingsWText[id] = cloned_drawing;
             }
 
             for (const auto& [id, drawing] : mDrawingsTexture) {
@@ -586,6 +604,10 @@ namespace Orbis {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
 
+            for (const auto& [id, drawing] : mDrawingsWText) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
             for (const auto& [id, drawing] : mDrawingsTexture) {
                 all_drawings.push_back({drawing->mZLevel, drawing});
             }
@@ -595,7 +617,7 @@ namespace Orbis {
             });
 
             for (const auto& [zlevel, drawing] : all_drawings) {
-                RenderCustomDrawings(window, drawing, pos_global);
+                RenderDrawings(window, drawing, pos_global);
             }
         }
     };

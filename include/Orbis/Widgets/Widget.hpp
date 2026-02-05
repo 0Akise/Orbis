@@ -56,6 +56,16 @@ namespace Orbis {
             return *iter->second;
         }
 
+        DrawingsWText& GetWText(const std::string& id) {
+            auto iter = mDrawingsWText.find(id);
+
+            if (iter == mDrawingsWText.end()) {
+                throw std::runtime_error("DrawingsWText with id '" + id + "' not found");
+            }
+
+            return *iter->second;
+        }
+
         DrawingsTexture& GetTexture(const std::string& id) {
             auto iter = mDrawingsTexture.find(id);
 
@@ -106,12 +116,7 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawLine(
-            const std::string&               id,
-            const std::vector<sf::Vector2f>& points,
-            size_t                           zlevel,
-            sf::Color                        color,
-            float                            thickness = 2.0f) {
+        Widget& DrawLine(const std::string& id, const std::vector<sf::Vector2f>& points, size_t zlevel, sf::Color color, float thickness = 2.0f) {
             auto drawing = std::make_shared<DrawingsLine>();
 
             drawing->mType      = DrawingType::Line;
@@ -126,17 +131,7 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawRect(
-            const std::string& id,
-            sf::Vector2f       size,
-            sf::Vector2f       position,
-            size_t             zlevel,
-            sf::Color          fill_color,
-            bool               is_outlined       = false,
-            float              outline_thickness = 0.0f,
-            sf::Color          outline_color     = sf::Color::Black,
-            bool               is_rounded        = false,
-            float              rounding_radius   = 0.0f) {
+        Widget& DrawRect(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, bool is_outlined = false, float outline_thickness = 0.0f, sf::Color outline_color = sf::Color::Black, bool is_rounded = false, float rounding_radius = 0.0f) {
             auto drawing = std::make_shared<DrawingsRect>();
 
             drawing->mType             = DrawingType::Rect;
@@ -156,15 +151,7 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawText(
-            const std::string&        id,
-            size_t                    font_size,
-            sf::Vector2f              position,
-            size_t                    zlevel,
-            sf::Color                 fill_color,
-            std::shared_ptr<sf::Font> font,
-            TextAlign                 align = TextAlign::LeftTop,
-            const std::string&        text  = "") {
+        Widget& DrawText(const std::string& id, size_t font_size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Font> font, TextAlign align = TextAlign::LeftTop, const std::string& text = "") {
             auto drawing = std::make_shared<DrawingsText>();
 
             drawing->mType      = DrawingType::Text;
@@ -182,15 +169,7 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawWText(
-            const std::string&        id,
-            size_t                    font_size,
-            sf::Vector2f              position,
-            size_t                    zlevel,
-            sf::Color                 fill_color,
-            std::shared_ptr<sf::Font> font,
-            TextAlign                 align = TextAlign::LeftTop,
-            const std::wstring&       wtext = L"") {
+        Widget& DrawWText(const std::string& id, size_t font_size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Font> font, TextAlign align = TextAlign::LeftTop, const std::wstring& wtext = L"") {
             auto drawing = std::make_shared<DrawingsWText>();
 
             drawing->mType      = DrawingType::WText;
@@ -208,14 +187,7 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawTexture(
-            const std::string&           id,
-            sf::Vector2f                 size,
-            sf::Vector2f                 position,
-            size_t                       zlevel,
-            sf::Color                    fill_color,
-            std::shared_ptr<sf::Texture> texture,
-            bool                         smoothing_enabled = false) {
+        Widget& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, bool smoothing_enabled = false) {
             auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType             = DrawingType::Texture;

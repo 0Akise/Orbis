@@ -9,18 +9,6 @@ namespace Orbis {
         Texture,
     };
 
-    enum class TextAlign {
-        LeftTop,
-        CenterTop,
-        RightTop,
-        LeftCenter,
-        Center,
-        RightCenter,
-        LeftBottom,
-        CenterBottom,
-        RightBottom,
-    };
-
     enum class WidgetType {
         Canvas,
         Button,
@@ -45,6 +33,18 @@ namespace Orbis {
         Normal,
         Hover,
         Focused,
+    };
+
+    enum class TextAlign {
+        LeftTop,
+        CenterTop,
+        RightTop,
+        LeftCenter,
+        Center,
+        RightCenter,
+        LeftBottom,
+        CenterBottom,
+        RightBottom,
     };
 
     enum class CursorStyle {

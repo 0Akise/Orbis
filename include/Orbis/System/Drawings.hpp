@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include <SFML/Graphics.hpp>
@@ -11,6 +12,7 @@ namespace Orbis {
     class DrawingsLine;
     class DrawingsRect;
     class DrawingsText;
+    class DrawingsWText;
     class DrawingsTexture;
 
     class Drawings {
@@ -42,18 +44,20 @@ namespace Orbis {
 
     class DrawingsText : public Drawings {
     public:
-        std::shared_ptr<sf::Font> mFont;
-        size_t                    mFontSize;
-        std::string               mText;
-        TextAlign                 mAlign;
+        std::shared_ptr<sf::Font>       mFont;
+        size_t                          mFontSize;
+        std::string                     mText;
+        TextAlign                       mAlign;
+        mutable std::optional<sf::Text> mCachedText;
     };
 
     class DrawingsWText : public Drawings {
     public:
-        std::shared_ptr<sf::Font> mFont;
-        size_t                    mFontSize;
-        std::wstring              mWText;
-        TextAlign                 mAlign;
+        std::shared_ptr<sf::Font>       mFont;
+        size_t                          mFontSize;
+        std::wstring                    mWText;
+        TextAlign                       mAlign;
+        mutable std::optional<sf::Text> mCachedText;
     };
 
     class DrawingsTexture : public Drawings {

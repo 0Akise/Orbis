@@ -35,17 +35,11 @@ namespace Orbis {
             return font;
         }
 
-        std::shared_ptr<sf::Texture> LoadTexture(
-            const std::string& path,
-            bool               srgb_enabled = false,
-            const sf::IntRect& area         = sf::IntRect()) {
+        std::shared_ptr<sf::Texture> LoadTexture(const std::string& path, bool srgb_enabled = false, const sf::IntRect& area = sf::IntRect()) {
             std::string key = path;
 
             if (area != sf::IntRect()) {
-                key += "_" + std::to_string(area.position.x) +
-                       "_" + std::to_string(area.position.y) +
-                       "_" + std::to_string(area.size.x) +
-                       "_" + std::to_string(area.size.y);
+                key += "_" + std::to_string(area.position.x) + "_" + std::to_string(area.position.y) + "_" + std::to_string(area.size.x) + "_" + std::to_string(area.size.y);
             }
 
             if (srgb_enabled == true) {

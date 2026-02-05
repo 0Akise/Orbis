@@ -7,27 +7,21 @@
 
 namespace Orbis {
     class Utils {
+        typedef std::chrono::steady_clock::time_point TimePoint;
+
     public:
-        static float GetElapsedSeconds(
-            const std::chrono::steady_clock::time_point& start,
-            const std::chrono::steady_clock::time_point& end) {
+        static float GetElapsedSeconds(const TimePoint& start, const TimePoint& end) {
             return std::chrono::duration<float>(end - start).count();
         }
 
-        static float GetTimeFactor(
-            const std::chrono::steady_clock::time_point& start,
-            float                                        durationSeconds) {
+        static float GetTimeFactor(const TimePoint& start, float durationSeconds) {
             auto  now     = std::chrono::steady_clock::now();
             float elapsed = GetElapsedSeconds(start, now);
 
             return std::min(1.0f, elapsed / durationSeconds);
         }
 
-        static float SmoothLerp(
-            float                                  from,
-            float                                  to,
-            std::chrono::steady_clock::time_point& start,
-            float                                  duration_in_seconds) {
+        static float SmoothLerp(float from, float to, TimePoint& start, float duration_in_seconds) {
             float t = GetTimeFactor(start, duration_in_seconds);
 
             t = std::max(0.0f, std::min(1.0f, t));
@@ -37,15 +31,9 @@ namespace Orbis {
             return from + smooth * (to - from);
         }
 
-        static std::vector<sf::Vector2f> GeneratePoints(
-            std::function<float(float)> func,
-            float                       x_min,
-            float                       x_max,
-            float                       step,
-            float                       scale_x,
-            float                       scale_y,
-            sf::Vector2f                origin) {
+        static std::vector<sf::Vector2f> GeneratePoints(std::function<float(float)> func, float x_min, float x_max, float step, float scale_x, float scale_y, sf::Vector2f origin) {
             std::vector<sf::Vector2f> points;
+
             for (float x = x_min; x <= x_max; x += step) {
                 float y = func(x);
 

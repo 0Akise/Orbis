@@ -6,10 +6,7 @@
 #include <SFML/System.hpp>
 
 namespace sf {
-    sf::VertexArray RectWireframe(
-        const sf::Vector2f& pos,
-        const sf::Vector2f& size,
-        const sf::Color&    color) {
+    sf::VertexArray RectWireframe(const sf::Vector2f& pos, const sf::Vector2f& size, const sf::Color& color) {
         sf::VertexArray vertices(sf::PrimitiveType::LineStrip, 6);
         sf::Vector2f    corners[4] = {
             pos,
@@ -30,10 +27,7 @@ namespace sf {
         return vertices;
     }
 
-    sf::ConvexShape RectRounded(
-        const sf::Vector2f& size,
-        float               radius,
-        size_t              corner_segments = 10) {
+    sf::ConvexShape RectRounded(const sf::Vector2f& size, float radius, size_t corner_segments = 10) {
         const float PI         = 3.1415;
         float       radius_max = std::min(size.x, size.y) / 2.0f;
 
