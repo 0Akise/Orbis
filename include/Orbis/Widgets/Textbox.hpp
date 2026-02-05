@@ -202,7 +202,7 @@ namespace Orbis {
             auto iter = mDrawingsText.find(id);
 
             if (iter == mDrawingsText.end()) {
-                throw std::runtime_error("DrawingsText with id '" + id + "' not foound");
+                throw std::runtime_error("DrawingsText with id '" + id + "' not found");
             }
 
             return *iter->second;
@@ -403,35 +403,14 @@ namespace Orbis {
             }
         }
 
-        void RenderImpl(sf::RenderWindow&, sf::Vector2f) override {
+        void RenderImpl(sf::RenderWindow& window, sf::Vector2f pos_panel) override {
             if (mIsVisible == false) {
                 return;
             }
 
-            // TODO: Implement rendering
-            std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
+            sf::Vector2f pos_global = pos_panel + mPosition;
 
-            for (const auto& [id, drawing] : mDrawingsRect) {
-                all_drawings.push_back({drawing->mZLevel, drawing});
-            }
-
-            for (const auto& [id, drawing] : mDrawingsText) {
-                all_drawings.push_back({drawing->mZLevel, drawing});
-            }
-
-            for (const auto& [id, drawing] : mDrawingsWText) {
-                all_drawings.push_back({drawing->mZLevel, drawing});
-            }
-
-            for (const auto& [id, drawing] : mDrawingsTexture) {
-                all_drawings.push_back({drawing->mZLevel, drawing});
-            }
-
-            std::sort(all_drawings.begin(), all_drawings.end(), [](const auto& a, const auto& b) {
-                return a.first < b.first;
-            });
-
-            // Stub
+            RenderAllDrawings(window, pos_global);
         }
     };
 } // namespace Orbis
