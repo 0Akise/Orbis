@@ -483,7 +483,7 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture) {
+        Widget& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, sf::Vector2f scale = {1.0f, 1.0f}) {
             auto drawing = std::make_shared<DrawingsTexture>();
 
             drawing->mType      = DrawingType::Texture;
@@ -493,6 +493,7 @@ namespace Orbis {
             drawing->mZLevel    = zlevel;
             drawing->mFillColor = fill_color;
             drawing->mTexture   = texture;
+            drawing->mScale     = scale;
 
             mDrawingsTexture[id] = drawing;
 

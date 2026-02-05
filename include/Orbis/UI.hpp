@@ -402,8 +402,8 @@ namespace Orbis {
             return *this;
         }
 
-        WidgetHandle& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture) {
-            mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture);
+        WidgetHandle& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, sf::Vector2f scale = {1.0f, 1.0f}) {
+            mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture, scale);
 
             return *this;
         }

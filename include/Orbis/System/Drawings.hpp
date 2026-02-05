@@ -64,6 +64,6 @@ namespace Orbis {
     public:
         std::shared_ptr<sf::Texture> mTexture;
         sf::Vector2f                 mSize;
-        sf::Vector2f                 mScale = {1.0f, 1.0f};
+        sf::Vector2f                 mScale;
     };
 } // namespace Orbis

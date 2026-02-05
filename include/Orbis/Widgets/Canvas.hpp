@@ -22,6 +22,8 @@ namespace Orbis {
         }
 
         void UpdateImpl(const Controls& controls, sf::Vector2f pos_panel) override {
+            UpdateAnimation();
+
             (void)controls;
             (void)pos_panel;
         }
