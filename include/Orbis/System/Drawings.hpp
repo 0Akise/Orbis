@@ -64,6 +64,5 @@ namespace Orbis {
     public:
         std::shared_ptr<sf::Texture> mTexture;
         sf::Vector2f                 mSize;
-        bool                         mTextureSmoothing;
     };
 } // namespace Orbis

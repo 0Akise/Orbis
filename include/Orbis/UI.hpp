@@ -33,7 +33,7 @@ namespace Orbis {
         sf::Vector2f mSize      = {0, 0};
         sf::Vector2f mPosition  = {0, 0};
         size_t       mZLevel    = 0;
-        bool         mIsVisible = true;
+        bool         mIsVisible = false;
 
         std::vector<std::shared_ptr<Widget>> mWidgets;
 
@@ -99,7 +99,17 @@ namespace Orbis {
                 return;
             }
 
+            std::vector<std::pair<size_t, std::shared_ptr<Widget>>> sorted_widgets;
+
             for (auto& widget : mWidgets) {
+                sorted_widgets.push_back({widget->GetZLevel(), widget});
+            }
+
+            std::sort(sorted_widgets.begin(), sorted_widgets.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            for (const auto& [zlevel, widget] : sorted_widgets) {
                 widget->UpdateImpl(controls, mPosition);
             }
         }
@@ -109,7 +119,17 @@ namespace Orbis {
                 return;
             }
 
+            std::vector<std::pair<size_t, std::shared_ptr<Widget>>> sorted_widgets;
+
             for (auto& widget : mWidgets) {
+                sorted_widgets.push_back({widget->GetZLevel(), widget});
+            }
+
+            std::sort(sorted_widgets.begin(), sorted_widgets.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            for (const auto& [zlevel, widget] : sorted_widgets) {
                 widget->RenderImpl(window, mPosition);
             }
         }
@@ -229,6 +249,18 @@ namespace Orbis {
 
         WidgetHandle& SetVisibility(bool visible) {
             mWidget->SetVisibility(visible);
+
+            return *this;
+        }
+
+        WidgetHandle& PositionAnimation(sf::Vector2f target, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            mWidget->PositionAnimation(target, duration, on_complete, easing);
+
+            return *this;
+        }
+
+        WidgetHandle& CancelAnimation() {
+            mWidget->CancelAnimation();
 
             return *this;
         }
@@ -364,8 +396,8 @@ namespace Orbis {
             return *this;
         }
 
-        WidgetHandle& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, bool smoothing_enabled = true) {
-            mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture, smoothing_enabled);
+        WidgetHandle& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture) {
+            mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture);
 
             return *this;
         }
@@ -519,7 +551,7 @@ namespace Orbis {
 
         void Render(sf::RenderWindow& window) {
             for (auto& panel : mPanels) {
-                panel->Update(mControls);
+                panel->Render(window);
             }
 
             for (auto& scene : mScenes) {
@@ -559,8 +591,8 @@ namespace Orbis {
             return GetInstance().mResourceVault.LoadFont(path);
         }
 
-        static std::shared_ptr<sf::Texture> LoadTexture(const std::string& path, bool srgb_enabled = false, const sf::IntRect& area = sf::IntRect()) {
-            return GetInstance().mResourceVault.LoadTexture(path, srgb_enabled, area);
+        static std::shared_ptr<sf::Texture> LoadTexture(const std::string& path, bool smoothing_enabled = false, bool srgb_enabled = false, const sf::IntRect& area = sf::IntRect()) {
+            return GetInstance().mResourceVault.LoadTexture(path, smoothing_enabled, srgb_enabled, area);
         }
 
         static UIContext CreateContext() {

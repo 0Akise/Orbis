@@ -83,9 +83,9 @@ namespace Orbis {
             return cloned;
         }
 
-        void UpdateImpl(
-            const Controls& controls,
-            sf::Vector2f    pos_panel) override {
+        void UpdateImpl(const Controls& controls, sf::Vector2f pos_panel) override {
+            UpdateAnimation();
+
             if (mIsVisible == false) {
                 return;
             }

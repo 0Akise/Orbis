@@ -5,9 +5,11 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 
 #include <SFML/Graphics.hpp>
 
+#include "Orbis/Anim.hpp"
 #include "Orbis/System/Controls.hpp"
 #include "Orbis/System/Drawings.hpp"
 
@@ -34,6 +36,8 @@ namespace Orbis {
 
     protected:
         using ColorModifier = std::function<sf::Color(DrawingType, const sf::Color&)>;
+
+        std::optional<AnimationState> mPosAnimation;
 
         void RenderDrawing(sf::RenderWindow& window, const std::shared_ptr<Drawings>& drawing, sf::Vector2f pos_widget, const ColorModifier& color_modifier = nullptr) {
             sf::Vector2f pos_drawing = pos_widget + drawing->mPosition;
@@ -205,14 +209,9 @@ namespace Orbis {
                     break;
                 }
                 case DrawingType::Texture: {
-                    auto      texture     = std::static_pointer_cast<DrawingsTexture>(drawing);
-                    sf::Color final_color = get_color(texture->mFillColor);
-
-                    if (texture->mTextureSmoothing == true && texture->mTexture->isSmooth() == false) {
-                        texture->mTexture->setSmooth(true);
-                    }
-
-                    sf::RectangleShape shape(texture->mSize);
+                    auto               texture     = std::static_pointer_cast<DrawingsTexture>(drawing);
+                    sf::Color          final_color = get_color(texture->mFillColor);
+                    sf::RectangleShape shape       = sf::RectangleShape(texture->mSize);
 
                     shape.setPosition(pos_drawing);
                     shape.setTexture(texture->mTexture.get());
@@ -285,6 +284,23 @@ namespace Orbis {
                 auto cloned_drawing = std::make_shared<DrawingsTexture>(*drawing);
 
                 target->mDrawingsTexture[id] = cloned_drawing;
+            }
+        }
+
+        void UpdateAnimation() {
+            if (mPosAnimation.has_value() == true) {
+                if (mPosAnimation->IsComplete() == true) {
+                    mPosition = mPosAnimation->mTargetPos;
+
+                    if (mPosAnimation->mOnComplete) {
+                        mPosAnimation->mOnComplete();
+                    }
+
+                    mPosAnimation.reset();
+                }
+                else {
+                    mPosition = mPosAnimation->GetCurrentPosition();
+                }
             }
         }
 
@@ -442,19 +458,35 @@ namespace Orbis {
             return *this;
         }
 
-        Widget& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, bool smoothing_enabled = false) {
+        Widget& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture) {
             auto drawing = std::make_shared<DrawingsTexture>();
 
-            drawing->mType             = DrawingType::Texture;
-            drawing->mID               = id;
-            drawing->mSize             = size;
-            drawing->mPosition         = position;
-            drawing->mZLevel           = zlevel;
-            drawing->mFillColor        = fill_color;
-            drawing->mTexture          = texture;
-            drawing->mTextureSmoothing = smoothing_enabled;
+            drawing->mType      = DrawingType::Texture;
+            drawing->mID        = id;
+            drawing->mSize      = size;
+            drawing->mPosition  = position;
+            drawing->mZLevel    = zlevel;
+            drawing->mFillColor = fill_color;
+            drawing->mTexture   = texture;
 
             mDrawingsTexture[id] = drawing;
+
+            return *this;
+        }
+
+        Widget& PositionAnimation(sf::Vector2f target, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            if (mPosAnimation.has_value() == false) {
+                mPosAnimation = AnimationState();
+            }
+
+            mPosAnimation->Start(mPosition, target, duration, std::move(on_complete));
+            mPosAnimation->SetEasing(easing);
+
+            return *this;
+        }
+
+        Widget& CancelAnimation() {
+            mPosAnimation.reset();
 
             return *this;
         }

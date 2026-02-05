@@ -35,7 +35,7 @@ namespace Orbis {
             return font;
         }
 
-        std::shared_ptr<sf::Texture> LoadTexture(const std::string& path, bool srgb_enabled = false, const sf::IntRect& area = sf::IntRect()) {
+        std::shared_ptr<sf::Texture> LoadTexture(const std::string& path, bool smoothing_enabled = false, bool srgb_enabled = false, const sf::IntRect& area = sf::IntRect()) {
             std::string key = path;
 
             if (area != sf::IntRect()) {
@@ -44,6 +44,10 @@ namespace Orbis {
 
             if (srgb_enabled == true) {
                 key += "_srgb";
+            }
+
+            if (smoothing_enabled == true) {
+                key += "_smooth";
             }
 
             auto iter = mTextures.find(key);
@@ -57,6 +61,8 @@ namespace Orbis {
             if (texture->loadFromFile(path, srgb_enabled, area) == false) {
                 throw std::runtime_error("Failed to load texture: " + path);
             }
+
+            texture->setSmooth(smoothing_enabled);
 
             mTextures[key] = texture;
 
