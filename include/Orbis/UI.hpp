@@ -14,9 +14,12 @@
 #include "Orbis/Widgets/Widget.hpp"
 
 namespace Orbis {
+    class Widget;
     class Panel;
     class Scene;
 
+    template <typename WT>
+    class WidgetHandle;
     class PanelHandle;
     class SceneHandle;
     class UIContext;
@@ -26,7 +29,7 @@ namespace Orbis {
 namespace Orbis {
     class Panel : public std::enable_shared_from_this<Panel> {
     private:
-        std::string  mName      = "Unnamed";
+        std::string  mName      = "Panel_Unnamed";
         sf::Vector2f mSize      = {0, 0};
         sf::Vector2f mPosition  = {0, 0};
         size_t       mZLevel    = 0;
@@ -114,22 +117,32 @@ namespace Orbis {
 
     class Scene : public std::enable_shared_from_this<Scene> {
     private:
-        std::string                         mName     = "Unnamed";
+        std::string                         mName     = "Scene_Unnamed";
         bool                                mIsActive = true;
         std::vector<std::shared_ptr<Panel>> mPanels;
         bool                                mIsRegistered = false;
 
     public:
+        Scene() = default;
+
+        const std::string& GetName() const {
+            return mName;
+        }
+
+        bool IsActive() const {
+            return mIsActive;
+        }
+
         Scene& SetName(const std::string& name) {
             mName = name;
             return *this;
         }
 
-        Scene& SetActive(bool active) {
-            mIsActive = active;
+        Scene& SetActive(bool is_active) {
+            mIsActive = is_active;
 
             for (auto& panel : mPanels) {
-                panel->SetVisibility(active);
+                panel->SetVisibility(is_active);
             }
 
             return *this;
@@ -137,6 +150,7 @@ namespace Orbis {
 
         Scene& AddPanel(std::shared_ptr<Panel> panel) {
             mPanels.push_back(panel);
+
             return *this;
         }
 
@@ -154,11 +168,213 @@ namespace Orbis {
 
         void Render(sf::RenderWindow& window) {
             if (mIsActive == false) {
+
                 return;
             }
+
             for (auto& panel : mPanels) {
                 panel->Render(window);
             }
+        }
+    };
+
+    /*
+    // API Handlers (Widget, Panel, Scene)
+    */
+    template <typename WT>
+    class WidgetHandle {
+    private:
+        std::shared_ptr<WT> mWidget;
+
+    public:
+        WidgetHandle(std::shared_ptr<WT> widget) : mWidget(widget) {};
+
+        std::shared_ptr<Widget> GetShared() const {
+            return std::static_pointer_cast<Widget>(mWidget);
+        }
+
+        DrawingsRect& GetRect(const std::string& id) {
+            return mWidget->GetRect(id);
+        }
+
+        DrawingsText& GetText(const std::string& id) {
+            return mWidget->GetText(id);
+        }
+
+        DrawingsWText& GetWText(const std::string& id) {
+            return mWidget->GetWText(id);
+        }
+
+        DrawingsTexture& GetTexture(const std::string& id) {
+            return mWidget->GetTexture(id);
+        }
+
+        WidgetHandle& SetSize(sf::Vector2f size) {
+            mWidget->SetSize(size);
+
+            return *this;
+        }
+
+        WidgetHandle& SetPosition(sf::Vector2f position) {
+            mWidget->SetPosition(position);
+
+            return *this;
+        }
+
+        WidgetHandle& SetZLevel(size_t zlevel) {
+            mWidget->SetZLevel(zlevel);
+
+            return *this;
+        }
+
+        WidgetHandle& SetVisibility(bool visible) {
+            mWidget->SetVisibility(visible);
+
+            return *this;
+        }
+
+        // Button
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetOnButtonPressed(std::function<void()> callback) {
+            static_cast<Button*>(mWidget.get())->SetOnButtonPressed(callback);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetStateColor(ButtonState state, sf::Color color) {
+            static_cast<Button*>(mWidget.get())->SetStateColor(state, color);
+
+            return *this;
+        }
+
+        // Slider
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, float> GetValue() const {
+            return static_cast<const Slider*>(mWidget.get())->GetValue();
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetRange(float min, float max) {
+            static_cast<Slider*>(mWidget.get())->SetRange(min, max);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetValue(float value) {
+            static_cast<Slider*>(mWidget.get())->SetValue(value);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetStepSize(float step) {
+            static_cast<Slider*>(mWidget.get())->SetStepSize(step);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetOrientation(bool horizontal) {
+            static_cast<Slider*>(mWidget.get())->SetOrientation(horizontal);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetOnValueChanged(std::function<void(float)> callback) {
+            static_cast<Slider*>(mWidget.get())->SetOnValueChanged(callback);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetTrackSize(sf::Vector2f size) {
+            static_cast<Slider*>(mWidget.get())->SetTrackSize(size);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetTrackColor(sf::Color color) {
+            static_cast<Slider*>(mWidget.get())->SetTrackColor(color);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetFillColor(sf::Color color) {
+            static_cast<Slider*>(mWidget.get())->SetFillColor(color);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetHandleSize(sf::Vector2f size) {
+            static_cast<Slider*>(mWidget.get())->SetHandleSize(size);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetHandleColor(SliderState state, sf::Color color) {
+            static_cast<Slider*>(mWidget.get())->SetHandleColor(state, color);
+
+            return *this;
+        }
+
+        // TextboxSingle
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnTextChanged(std::function<void(const sf::String&)> callback) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetOnTextChanged(callback);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnEnterPressed(std::function<void()> callback) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetOnEnterPressed(callback);
+
+            return *this;
+        }
+
+        // Drawings
+        WidgetHandle& DrawLine(const std::string& id, const std::vector<sf::Vector2f>& points, size_t zlevel, sf::Color color, float thickness) {
+            mWidget->DrawLine(id, points, zlevel, color, thickness);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawRect(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, bool is_outlined = false, float outline_thickness = 0.0f, sf::Color outline_color = sf::Color::Black, bool is_rounded = false, float rounding_radius = 0.0f) {
+            mWidget->DrawRect(id, size, position, zlevel, fill_color, is_outlined, outline_thickness, outline_color, is_rounded, rounding_radius);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawText(const std::string& id, size_t font_size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Font> font, TextAlign align = TextAlign::LeftTop, const std::string& text = "") {
+            mWidget->DrawText(id, font_size, position, zlevel, fill_color, font, align, text);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawWText(const std::string& id, size_t font_size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Font> font, TextAlign align = TextAlign::LeftTop, const std::wstring& wtext = L"") {
+            mWidget->DrawWText(id, font_size, position, zlevel, fill_color, font, align, wtext);
+
+            return *this;
+        }
+
+        WidgetHandle& DrawTexture(const std::string& id, sf::Vector2f size, sf::Vector2f position, size_t zlevel, sf::Color fill_color, std::shared_ptr<sf::Texture> texture, bool smoothing_enabled = true) {
+            mWidget->DrawTexture(id, size, position, zlevel, fill_color, texture, smoothing_enabled);
+
+            return *this;
+        }
+
+        // Implementations
+        WidgetHandle Clone() const {
+            auto cloned = std::static_pointer_cast<WT>(mWidget->CloneImpl());
+
+            return WidgetHandle<WT>(cloned);
         }
     };
 
@@ -213,11 +429,44 @@ namespace Orbis {
         PanelHandle& Register(UIContext& context);
     };
 
+    class SceneHandle {
+    private:
+        std::shared_ptr<Scene> mScene;
+
+    public:
+        SceneHandle(std::shared_ptr<Scene> scene) : mScene(scene) {};
+
+        std::shared_ptr<Scene> GetShared() const {
+            return mScene;
+        }
+
+        SceneHandle& SetName(const std::string& name) {
+            mScene->SetName(name);
+
+            return *this;
+        }
+
+        SceneHandle& SetActive(bool is_active) {
+            mScene->SetActive(is_active);
+
+            return *this;
+        }
+
+        SceneHandle& AddPanel(const PanelHandle& panel_handle) {
+            mScene->AddPanel(panel_handle.GetShared());
+
+            return *this;
+        }
+
+        SceneHandle& Register(UIContext& context);
+    };
+
     class UIContext {
     private:
         Controls mControls;
 
-        std::vector<std::shared_ptr<Panel>> mPanels;
+        std::vector<std::shared_ptr<Panel>> mPanels; // Standalone panels?
+        std::vector<std::shared_ptr<Scene>> mScenes;
 
     public:
         UIContext() = default;
@@ -235,8 +484,25 @@ namespace Orbis {
             std::cout << std::endl;
         }
 
+        void ShowSceneList() const {
+            std::cout << "UI Scenes Listing\n";
+            std::cout << "=====================\n";
+
+            for (const auto& scene : mScenes) {
+                std::cout
+                    << "Name: " << scene->GetName() << "\t"
+                    << "Active: " << (scene->IsActive() ? "Yes" : "No") << "\n";
+            }
+
+            std::cout << std::endl;
+        }
+
         void AddPanel(std::shared_ptr<Panel> panel) {
             mPanels.push_back(panel);
+        }
+
+        void AddScene(std::shared_ptr<Scene> scene) {
+            mScenes.push_back(scene);
         }
 
         void Update(const Controls& controls) {
@@ -245,11 +511,19 @@ namespace Orbis {
             for (auto& panel : mPanels) {
                 panel->Update(mControls);
             }
+
+            for (auto& scene : mScenes) {
+                scene->Update(mControls);
+            }
         }
 
         void Render(sf::RenderWindow& window) {
             for (auto& panel : mPanels) {
-                panel->Render(window);
+                panel->Update(mControls);
+            }
+
+            for (auto& scene : mScenes) {
+                scene->Render(window);
             }
         }
     };
@@ -316,6 +590,10 @@ namespace Orbis {
             }
         }
 
+        static SceneHandle CreateScene() {
+            return SceneHandle(std::make_shared<Scene>());
+        }
+
         static void ShowPanelList(sf::RenderWindow& window) {
             auto& instance = GetInstance();
             auto  iter     = instance.mWindowToContext.find(&window);
@@ -327,6 +605,19 @@ namespace Orbis {
             UIContext* context = iter->second;
 
             context->ShowPanelList();
+        }
+
+        static void ShowSceneList(sf::RenderWindow& window) {
+            auto& instance = GetInstance();
+            auto  iter     = instance.mWindowToContext.find(&window);
+
+            if (iter == instance.mWindowToContext.end()) {
+                throw std::runtime_error("Window not bound to any UIContext");
+            }
+
+            UIContext* context = iter->second;
+
+            context->ShowSceneList();
         }
 
         static void ProcessEvent(sf::RenderWindow& window, const sf::Event& event) {
@@ -485,6 +776,12 @@ namespace Orbis {
         context.AddScene(shared_from_this()); // TODO
 
         mIsRegistered = true;
+
+        return *this;
+    }
+
+    inline SceneHandle& SceneHandle::Register(UIContext& context) {
+        mScene->Register(context);
 
         return *this;
     }
