@@ -16,35 +16,7 @@ namespace Orbis {
             cloned->mZLevel    = mZLevel;
             cloned->mIsVisible = mIsVisible;
 
-            for (const auto& [id, drawing] : mDrawingsLine) {
-                auto cloned_drawing = std::make_shared<DrawingsLine>(*drawing);
-
-                cloned->mDrawingsLine[id] = cloned_drawing;
-            }
-
-            for (const auto& [id, drawing] : mDrawingsRect) {
-                auto cloned_drawing = std::make_shared<DrawingsRect>(*drawing);
-
-                cloned->mDrawingsRect[id] = cloned_drawing;
-            }
-
-            for (const auto& [id, drawing] : mDrawingsText) {
-                auto cloned_drawing = std::make_shared<DrawingsText>(*drawing);
-
-                cloned->mDrawingsText[id] = cloned_drawing;
-            }
-
-            for (const auto& [id, drawing] : mDrawingsWText) {
-                auto cloned_drawing = std::make_shared<DrawingsWText>(*drawing);
-
-                cloned->mDrawingsWText[id] = cloned_drawing;
-            }
-
-            for (const auto& [id, drawing] : mDrawingsTexture) {
-                auto cloned_drawing = std::make_shared<DrawingsTexture>(*drawing);
-
-                cloned->mDrawingsTexture[id] = cloned_drawing;
-            }
+            CloneDrawingsTo(cloned.get());
 
             return cloned;
         }

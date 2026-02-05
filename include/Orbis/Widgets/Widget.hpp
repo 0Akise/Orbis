@@ -257,6 +257,38 @@ namespace Orbis {
             }
         }
 
+        void CloneDrawingsTo(Widget* target) const {
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                auto cloned_drawing = std::make_shared<DrawingsLine>(*drawing);
+
+                target->mDrawingsLine[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsRect) {
+                auto cloned_drawing = std::make_shared<DrawingsRect>(*drawing);
+
+                target->mDrawingsRect[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsText) {
+                auto cloned_drawing = std::make_shared<DrawingsText>(*drawing);
+
+                target->mDrawingsText[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsWText) {
+                auto cloned_drawing = std::make_shared<DrawingsWText>(*drawing);
+
+                target->mDrawingsWText[id] = cloned_drawing;
+            }
+
+            for (const auto& [id, drawing] : mDrawingsTexture) {
+                auto cloned_drawing = std::make_shared<DrawingsTexture>(*drawing);
+
+                target->mDrawingsTexture[id] = cloned_drawing;
+            }
+        }
+
     public:
         virtual ~Widget() = default;
 
