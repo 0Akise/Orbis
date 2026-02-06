@@ -9,21 +9,19 @@
 
 namespace Orbis {
     class Anim {
-        typedef std::chrono::steady_clock::time_point TimePoint;
-
     public:
-        static float GetElapsedSeconds(const TimePoint& start, const TimePoint& end) {
+        static float GetElapsedSeconds(const std::chrono::steady_clock::time_point& start, const std::chrono::steady_clock::time_point& end) {
             return std::chrono::duration<float>(end - start).count();
         }
 
-        static float GetTimeFactor(const TimePoint& start, float durationSeconds) {
+        static float GetTimeFactor(const std::chrono::steady_clock::time_point& start, float durationSeconds) {
             auto  now     = std::chrono::steady_clock::now();
             float elapsed = GetElapsedSeconds(start, now);
 
             return std::min(1.0f, elapsed / durationSeconds);
         }
 
-        static float SmoothLerp(float from, float to, TimePoint& start, float duration_in_seconds) {
+        static float SmoothLerp(float from, float to, std::chrono::steady_clock::time_point& start, float duration_in_seconds) {
             float t = GetTimeFactor(start, duration_in_seconds);
 
             t = std::max(0.0f, std::min(1.0f, t));
@@ -87,7 +85,7 @@ namespace Orbis {
             return {from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t};
         }
 
-        static sf::Vector2f SmoothLerpVector(sf::Vector2f from, sf::Vector2f to, TimePoint& start, float duration) {
+        static sf::Vector2f SmoothLerpVector(sf::Vector2f from, sf::Vector2f to, std::chrono::steady_clock::time_point& start, float duration) {
             float t = GetTimeFactor(start, duration);
 
             t = EaseOutQuad(std::max(0.0f, std::min(1.0f, t)));
@@ -111,11 +109,9 @@ namespace Orbis {
     };
 
     struct AnimationState {
-        typedef std::chrono::steady_clock::time_point TimePoint;
-
-        bool      mIsActive = false;
-        TimePoint mStartTime;
-        float     mDuration = 0.0f;
+        bool                                  mIsActive = false;
+        std::chrono::steady_clock::time_point mStartTime;
+        float                                 mDuration = 0.0f;
 
         sf::Vector2f mStartPos  = {0.0f, 0.0f};
         sf::Vector2f mTargetPos = {0.0f, 0.0f};
@@ -162,12 +158,10 @@ namespace Orbis {
 
     class DelayedCallback {
     private:
-        typedef std::chrono::steady_clock::time_point TimePoint;
-
-        bool                  mIsActive = false;
-        TimePoint             mStartTime;
-        float                 mDelay    = 0.0f;
-        std::function<void()> mCallback = nullptr;
+        bool                                  mIsActive = false;
+        std::chrono::steady_clock::time_point mStartTime;
+        float                                 mDelay    = 0.0f;
+        std::function<void()>                 mCallback = nullptr;
 
     public:
         bool IsActive() const {

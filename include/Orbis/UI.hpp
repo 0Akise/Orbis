@@ -33,7 +33,7 @@ namespace Orbis {
         sf::Vector2f mSize      = {0, 0};
         sf::Vector2f mPosition  = {0, 0};
         size_t       mZLevel    = 0;
-        bool         mIsVisible = false;
+        bool         mIsVisible = true;
 
         std::vector<std::shared_ptr<Widget>> mWidgets;
 
@@ -54,6 +54,10 @@ namespace Orbis {
 
         size_t GetZLevel() const {
             return mZLevel;
+        }
+
+        bool GetVisibility() const {
+            return mIsVisible;
         }
 
         Panel& SetName(const std::string& name) {
@@ -138,7 +142,7 @@ namespace Orbis {
     class Scene : public std::enable_shared_from_this<Scene> {
     private:
         std::string                         mName     = "Scene_Unnamed";
-        bool                                mIsActive = true;
+        bool                                mIsActive = false;
         std::vector<std::shared_ptr<Panel>> mPanels;
         bool                                mIsRegistered = false;
 
@@ -259,14 +263,14 @@ namespace Orbis {
             return *this;
         }
 
-        WidgetHandle& CancelAnimation() {
-            mWidget->CancelAnimation();
+        WidgetHandle& ScaleAnimation(sf::Vector2f target_scale, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            mWidget->ScaleAnimation(target_scale, duration, on_complete, easing);
 
             return *this;
         }
 
-        WidgetHandle& ScaleAnimation(sf::Vector2f target_scale, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
-            mWidget->ScaleAnimation(target_scale, duration, on_complete, easing);
+        WidgetHandle& CancelAnimation() {
+            mWidget->CancelAnimation();
 
             return *this;
         }
@@ -364,6 +368,34 @@ namespace Orbis {
 
         // TextboxSingle
         template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetPlaceholder(std::string placeholder) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetPlaceholder(placeholder);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetPlaceholderW(std::wstring placeholder_w) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetPlaceholder(placeholder_w);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetEditableText(const std::string& text_id) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetEditableText(text_id);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetEditableWText(const std::string& wtext_id) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetEditableWText(wtext_id);
+
+            return *this;
+        }
+
+        template <typename U = WT>
         std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnTextChanged(std::function<void(const sf::String&)> callback) {
             static_cast<TextboxSingle*>(mWidget.get())->SetOnTextChanged(callback);
 
@@ -373,6 +405,20 @@ namespace Orbis {
         template <typename U = WT>
         std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnEnterPressed(std::function<void()> callback) {
             static_cast<TextboxSingle*>(mWidget.get())->SetOnEnterPressed(callback);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> BindInt(int* value_ptr, int min_value = INT_MIN, int max_value = INT_MAX) {
+            static_cast<TextboxSingle*>(mWidget.get())->BindInt(value_ptr, min_value, max_value);
+
+            return *this;
+        }
+
+        template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> BindFloat(float* value_ptr, float min_value = -FLT_MAX, float max_value = FLT_MAX) {
+            static_cast<TextboxSingle*>(mWidget.get())->BindFloat(value_ptr, min_value, max_value);
 
             return *this;
         }
@@ -516,6 +562,7 @@ namespace Orbis {
             for (const auto& panel : mPanels) {
                 std::cout
                     << "Name: " << panel->GetName() << "\t"
+                    << "Visible: " << panel->GetVisibility() << "\t"
                     << "ZLevel: " << panel->GetZLevel() << "\n";
             }
 
@@ -624,7 +671,7 @@ namespace Orbis {
                 return WidgetHandle<TextboxSingle>(std::make_shared<TextboxSingle>());
             }
             else {
-                static_assert(Type == WidgetType::Canvas || Type == WidgetType::Button, "Unknown widget type");
+                static_assert(Type == WidgetType::Canvas || Type == WidgetType::Button || Type == WidgetType::Slider || Type == WidgetType::TextboxSingle, "Unknown widget type");
             }
         }
 

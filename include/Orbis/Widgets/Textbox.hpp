@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cfloat>
+#include <limits>
+
 #include "Orbis/SFML/Shapes.hpp"
 #include "Orbis/Widgets/Widget.hpp"
 
@@ -11,7 +14,7 @@ namespace Orbis {
 
         sf::String  mText        = "";
         sf::String  mPlaceholder = "";
-        std::string mEditableID  = "";
+        std::string mIDEditable  = "";
 
         size_t mCursorPos      = 0;
         size_t mSelectionStart = 0;
@@ -19,6 +22,7 @@ namespace Orbis {
 
         TextboxState mState = TextboxState::Normal;
         // CursorStyle  mCursorStyle = CursorStyle::Line;
+        bool mIsWideText = false;
 
         bool                                  mIsCursorVisible = false;
         std::chrono::steady_clock::time_point mCursorLastBlink;
@@ -28,43 +32,63 @@ namespace Orbis {
         float mPadding      = 5.0f;
 
         float GetCursorPosX() const {
-            if (mEditableID.empty() == true) {
+            if (mIDEditable.empty() == true) {
                 return 0.0f;
             }
-
-            const DrawingsText& text_drawing = GetText(mEditableID);
 
             if (mText.isEmpty() == true || mCursorPos == 0) {
                 return 0.0f;
             }
 
-            sf::Text temp = sf::Text(*text_drawing.mFont, mText.substring(0, mCursorPos), text_drawing.mFontSize);
+            if (mIsWideText == false) {
+                const DrawingsText& text_drawing = GetText(mIDEditable);
+                sf::Text            temp         = sf::Text(*text_drawing.mFont, mText.substring(0, mCursorPos), text_drawing.mFontSize);
 
-            return temp.getLocalBounds().size.x;
+                return temp.getLocalBounds().size.x;
+            }
+            else {
+                const DrawingsWText& text_drawing = GetWText(mIDEditable);
+                sf::Text             temp         = sf::Text(*text_drawing.mFont, mText.substring(0, mCursorPos), text_drawing.mFontSize);
+
+                return temp.getLocalBounds().size.x;
+            }
         }
 
         size_t GetCursorPosFromMouseX(float mouse_x, sf::Vector2f widget_pos) const {
-            if (mEditableID.empty() == true) {
+            if (mIDEditable.empty() == true) {
                 return 0;
             }
 
-            const DrawingsText& text_drawing = GetText(mEditableID);
-            float               adjusted_x   = mouse_x - widget_pos.x - mPadding + mScrollOffset;
+            float adjusted_x = mouse_x - widget_pos.x - mPadding + mScrollOffset;
 
             if (adjusted_x <= 0.0f) {
                 return 0;
             }
 
+            std::shared_ptr<sf::Font> font;
+            size_t                    font_size;
+
+            if (mIsWideText == false) {
+                const DrawingsText& text_drawing = GetText(mIDEditable);
+                font                             = text_drawing.mFont;
+                font_size                        = text_drawing.mFontSize;
+            }
+            else {
+                const DrawingsWText& text_drawing = GetWText(mIDEditable);
+                font                              = text_drawing.mFont;
+                font_size                         = text_drawing.mFontSize;
+            }
+
             for (size_t i = 0; i <= mText.getSize(); ++i) {
-                sf::Text temp = sf::Text(*text_drawing.mFont, mText.substring(0, i), text_drawing.mFontSize);
+                sf::Text temp = sf::Text(*font, mText.substring(0, i), font_size);
                 float    x    = temp.getLocalBounds().size.x;
 
                 if (adjusted_x <= x) {
-                    if (i > 0) {
-                        sf::Text prev   = sf::Text(*text_drawing.mFont, mText.substring(0, i - 1), text_drawing.mFontSize);
+                    if (0 < i) {
+                        sf::Text prev   = sf::Text(*font, mText.substring(0, i - 1), font_size);
                         float    prev_x = prev.getLocalBounds().size.x;
 
-                        if (adjusted_x - prev_x < x - adjusted_x) {
+                        if ((adjusted_x - prev_x) < (x - adjusted_x)) {
                             return i - 1;
                         }
                     }
@@ -175,7 +199,7 @@ namespace Orbis {
         }
 
         void UpdateScrollOffset() {
-            if (mEditableID.empty() == true) {
+            if (mIDEditable.empty() == true) {
                 return;
             }
 
@@ -208,6 +232,16 @@ namespace Orbis {
             return *iter->second;
         }
 
+        DrawingsWText& GetWText(const std::string& id) const {
+            auto iter = mDrawingsWText.find(id);
+
+            if (iter == mDrawingsWText.end()) {
+                throw std::runtime_error("DrawingsWText with id '" + id + "' not found");
+            }
+
+            return *iter->second;
+        }
+
         TextboxSingle& SetOnTextChanged(std::function<void(const sf::String&)> callback) {
             mOnTextChanged = std::move(callback);
 
@@ -226,14 +260,125 @@ namespace Orbis {
             return *this;
         }
 
-        TextboxSingle& SetEdiableText(const std::string& text_id) {
-            mEditableID = text_id;
+        TextboxSingle& SetEditableText(const std::string& text_id) {
+            mIDEditable = text_id;
+            mIsWideText = false;
+
+            return *this;
+        }
+
+        TextboxSingle& SetEditableWText(const std::string& wtext_id) {
+            mIDEditable = wtext_id;
+            mIsWideText = true;
 
             return *this;
         }
 
         TextboxSingle& SetCursorBlinkInterval(float seconds) {
             mCursorBlinkInterval = seconds;
+
+            return *this;
+        }
+
+        TextboxSingle& BindInt(int* value_ptr, int min_value = INT_MIN, int max_value = INT_MAX) {
+            if (value_ptr == nullptr) {
+                throw std::runtime_error("BindInt: value_ptr cannot be null");
+            }
+
+            mOnTextChanged = [this, value_ptr, min_value, max_value](const sf::String& text) {
+                std::string text_str = text.toAnsiString();
+
+                if (text_str.empty() == true) {
+                    return;
+                }
+
+                try {
+                    size_t pos    = 0;
+                    int    parsed = std::stoi(text_str, &pos);
+
+                    if (pos != text_str.length()) {
+                        return;
+                    }
+
+                    int clamped = std::max(min_value, std::min(max_value, parsed));
+
+                    *value_ptr = clamped;
+
+                    if (clamped != parsed) {
+                        mText      = std::to_string(clamped);
+                        mCursorPos = mText.getSize();
+
+                        UpdateScrollOffset();
+                    }
+                } catch (const std::invalid_argument&) {
+                    return;
+                } catch (const std::out_of_range&) {
+                    if (text_str[0] == '-') {
+                        *value_ptr = min_value;
+                        mText      = std::to_string(min_value);
+                    }
+                    else {
+                        *value_ptr = max_value;
+                        mText      = std::to_string(max_value);
+                    }
+
+                    mCursorPos = mText.getSize();
+
+                    UpdateScrollOffset();
+                }
+            };
+
+            return *this;
+        }
+
+        TextboxSingle& BindFloat(float* value_ptr, float min_value = -FLT_MAX, float max_value = FLT_MAX) {
+            if (value_ptr == nullptr) {
+                throw std::runtime_error("BindFloat: value_ptr cannot be null");
+            }
+
+            mOnTextChanged = [this, value_ptr, min_value, max_value](const sf::String& text) {
+                std::string text_str = text.toAnsiString();
+
+                if (text_str.empty() == true) {
+                    return;
+                }
+
+                try {
+                    size_t pos    = 0;
+                    float  parsed = std::stof(text_str, &pos);
+
+                    if (pos != text_str.length()) {
+                        return;
+                    }
+
+                    float clamped = std::max(min_value, std::min(max_value, parsed));
+
+                    *value_ptr = clamped;
+
+                    if (std::abs(clamped - parsed) > 0.0001f) {
+                        mText      = std::to_string(clamped);
+                        mCursorPos = mText.getSize();
+
+                        UpdateScrollOffset();
+                    }
+
+                } catch (const std::invalid_argument&) {
+                    return;
+                } catch (const std::out_of_range&) {
+                    if (text_str[0] == '-') {
+                        *value_ptr = min_value;
+                        mText      = std::to_string(min_value);
+                    }
+                    else {
+                        *value_ptr = max_value;
+                        mText      = std::to_string(max_value);
+                    }
+
+                    mCursorPos = mText.getSize();
+
+                    UpdateScrollOffset();
+                }
+            };
 
             return *this;
         }
@@ -247,7 +392,7 @@ namespace Orbis {
             cloned->mIsVisible      = mIsVisible;
             cloned->mText           = mText;
             cloned->mPlaceholder    = mPlaceholder;
-            cloned->mEditableID     = mEditableID;
+            cloned->mIDEditable     = mIDEditable;
             cloned->mOnTextChanged  = mOnTextChanged;
             cloned->mOnEnterPressed = mOnEnterPressed;
 
@@ -383,6 +528,77 @@ namespace Orbis {
             sf::Vector2f pos_global = pos_panel + mPosition;
 
             RenderAllDrawings(window, pos_global);
+
+            if (mIDEditable.empty() == true) {
+                return;
+            }
+
+            std::shared_ptr<sf::Font> font;
+            size_t                    font_size;
+            sf::Color                 fill_color;
+            sf::Vector2f              drawing_position;
+
+            if (mIsWideText == false) {
+                const DrawingsText& text_drawing = GetText(mIDEditable);
+
+                font             = text_drawing.mFont;
+                font_size        = text_drawing.mFontSize;
+                fill_color       = text_drawing.mFillColor;
+                drawing_position = text_drawing.mPosition;
+            }
+            else {
+                const DrawingsWText& text_drawing = GetWText(mIDEditable);
+
+                font             = text_drawing.mFont;
+                font_size        = text_drawing.mFontSize;
+                fill_color       = text_drawing.mFillColor;
+                drawing_position = text_drawing.mPosition;
+            }
+
+            sf::Vector2f text_pos = pos_global + drawing_position;
+
+            text_pos.x += mPadding - mScrollOffset;
+
+            if (mText.isEmpty() == true && mState != TextboxState::Focused) {
+                if (mPlaceholder.isEmpty() == false) {
+                    sf::Text placeholder_text(*font, mPlaceholder, font_size);
+
+                    placeholder_text.setPosition(text_pos);
+                    placeholder_text.setFillColor(sf::Color(150, 150, 150, 255));
+                    window.draw(placeholder_text);
+                }
+
+                return;
+            }
+
+            if (mSelectionStart != mSelectionEnd && mState == TextboxState::Focused) {
+                size_t             selection_start  = std::min(mSelectionStart, mSelectionEnd);
+                size_t             selection_end    = std::max(mSelectionStart, mSelectionEnd);
+                sf::Text           selection_before = sf::Text(*font, mText.substring(0, selection_start), font_size);
+                sf::Text           selected         = sf::Text(*font, mText.substring(selection_start, selection_end - selection_start), font_size);
+                float              before_width     = selection_before.getLocalBounds().size.x;
+                float              sel_width        = selected.getLocalBounds().size.x;
+                sf::RectangleShape highlight        = sf::RectangleShape({sel_width, static_cast<float>(font_size)});
+
+                highlight.setPosition({text_pos.x + before_width, text_pos.y});
+                highlight.setFillColor(sf::Color(100, 150, 255, 128));
+                window.draw(highlight);
+            }
+
+            sf::Text display_text = sf::Text(*font, mText, font_size);
+
+            display_text.setPosition(text_pos);
+            display_text.setFillColor(fill_color);
+            window.draw(display_text);
+
+            if (mState == TextboxState::Focused && mIsCursorVisible == true) {
+                float              cursor_x = text_pos.x + GetCursorPosX();
+                sf::RectangleShape cursor   = sf::RectangleShape({2.0f, static_cast<float>(font_size)});
+
+                cursor.setPosition({cursor_x, text_pos.y});
+                cursor.setFillColor(fill_color);
+                window.draw(cursor);
+            }
         }
     };
 } // namespace Orbis

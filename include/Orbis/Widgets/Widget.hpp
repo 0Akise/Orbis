@@ -259,6 +259,42 @@ namespace Orbis {
             }
         }
 
+        void RenderAllDrawingsSkipEditable(sf::RenderWindow& window, sf::Vector2f pos_widget, std::string& id_editable, const ColorModifier& color_modifier = nullptr) {
+            std::vector<std::pair<size_t, std::shared_ptr<Drawings>>> all_drawings;
+
+            for (const auto& [id, drawing] : mDrawingsLine) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            for (const auto& [id, drawing] : mDrawingsRect) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            for (const auto& [id, drawing] : mDrawingsText) {
+                if (id != id_editable) {
+                    all_drawings.push_back({drawing->mZLevel, drawing});
+                }
+            }
+
+            for (const auto& [id, drawing] : mDrawingsWText) {
+                if (id != id_editable) {
+                    all_drawings.push_back({drawing->mZLevel, drawing});
+                }
+            }
+
+            for (const auto& [id, drawing] : mDrawingsTexture) {
+                all_drawings.push_back({drawing->mZLevel, drawing});
+            }
+
+            std::sort(all_drawings.begin(), all_drawings.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            for (const auto& [zlevel, drawing] : all_drawings) {
+                RenderDrawing(window, drawing, pos_widget, color_modifier);
+            }
+        }
+
         void CloneDrawingsTo(Widget* target) const {
             for (const auto& [id, drawing] : mDrawingsLine) {
                 auto cloned_drawing = std::make_shared<DrawingsLine>(*drawing);
