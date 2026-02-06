@@ -29,7 +29,51 @@ namespace Orbis {
         float                                 mCursorBlinkInterval = 0.5f;
 
         float mScrollOffset = 0.0f;
-        float mPadding      = 5.0f;
+        float mPadding      = 0.0f;
+
+        void InvalidateCache() {
+            if (mIDEditable.empty() == true) {
+                return;
+            }
+
+            if (mIsWideText == false) {
+                auto iter = mDrawingsText.find(mIDEditable);
+
+                if (iter != mDrawingsText.end()) {
+                    iter->second->mCachedText.reset();
+                }
+            }
+            else {
+                auto iter = mDrawingsWText.find(mIDEditable);
+
+                if (iter != mDrawingsWText.end()) {
+                    iter->second->mCachedText.reset();
+                }
+            }
+        }
+
+        void UpdateDrawingText(const sf::String& new_text) {
+            if (mIDEditable.empty() == true) {
+                return;
+            }
+
+            if (mIsWideText == false) {
+                auto iter = mDrawingsText.find(mIDEditable);
+
+                if (iter != mDrawingsText.end()) {
+                    iter->second->mText = new_text.toAnsiString();
+                    iter->second->mCachedText.reset();
+                }
+            }
+            else {
+                auto iter = mDrawingsWText.find(mIDEditable);
+
+                if (iter != mDrawingsWText.end()) {
+                    iter->second->mWText = new_text.toWideString();
+                    iter->second->mCachedText.reset();
+                }
+            }
+        }
 
         float GetCursorPosX() const {
             if (mIDEditable.empty() == true) {
@@ -133,15 +177,16 @@ namespace Orbis {
                 return;
             }
 
-            size_t start = std::min(mSelectionStart, mSelectionEnd);
-            size_t end   = std::max(mSelectionStart, mSelectionEnd);
-
+            size_t     start  = std::min(mSelectionStart, mSelectionEnd);
+            size_t     end    = std::max(mSelectionStart, mSelectionEnd);
             sf::String before = mText.substring(0, start);
             sf::String after  = mText.substring(end);
 
             mText           = before + after;
             mCursorPos      = start;
             mSelectionStart = mSelectionEnd = 0;
+
+            UpdateDrawingText(mText);
 
             if (mOnTextChanged) {
                 mOnTextChanged(mText);
@@ -157,7 +202,10 @@ namespace Orbis {
             sf::String after  = mText.substring(mCursorPos);
 
             mText = before + text + after;
+
             mCursorPos += text.getSize();
+
+            UpdateDrawingText(mText);
 
             if (mOnTextChanged) {
                 mOnTextChanged(mText);
@@ -167,7 +215,6 @@ namespace Orbis {
         void DeleteAtCursor(bool forward = false) {
             if (mSelectionStart != mSelectionEnd) {
                 DeleteSelection();
-
                 return;
             }
 
@@ -177,6 +224,8 @@ namespace Orbis {
                     sf::String after  = mText.substring(mCursorPos + 1);
 
                     mText = before + after;
+
+                    UpdateDrawingText(mText);
 
                     if (mOnTextChanged) {
                         mOnTextChanged(mText);
@@ -189,7 +238,10 @@ namespace Orbis {
                     sf::String after  = mText.substring(mCursorPos);
 
                     mText = before + after;
+
                     mCursorPos--;
+
+                    UpdateDrawingText(mText);
 
                     if (mOnTextChanged) {
                         mOnTextChanged(mText);
@@ -280,6 +332,12 @@ namespace Orbis {
             return *this;
         }
 
+        TextboxSingle& SetPadding(float padding) {
+            mPadding = padding;
+
+            return *this;
+        }
+
         TextboxSingle& BindInt(int* value_ptr, int min_value = INT_MIN, int max_value = INT_MAX) {
             if (value_ptr == nullptr) {
                 throw std::runtime_error("BindInt: value_ptr cannot be null");
@@ -308,6 +366,7 @@ namespace Orbis {
                         mText      = std::to_string(clamped);
                         mCursorPos = mText.getSize();
 
+                        UpdateDrawingText(mText);
                         UpdateScrollOffset();
                     }
                 } catch (const std::invalid_argument&) {
@@ -324,6 +383,7 @@ namespace Orbis {
 
                     mCursorPos = mText.getSize();
 
+                    UpdateDrawingText(mText);
                     UpdateScrollOffset();
                 }
             };
@@ -527,7 +587,7 @@ namespace Orbis {
 
             sf::Vector2f pos_global = pos_panel + mPosition;
 
-            RenderAllDrawings(window, pos_global);
+            RenderAllDrawingsSkipEditable(window, pos_global, mIDEditable);
 
             if (mIDEditable.empty() == true) {
                 return;
@@ -537,6 +597,7 @@ namespace Orbis {
             size_t                    font_size;
             sf::Color                 fill_color;
             sf::Vector2f              drawing_position;
+            TextAlign                 text_align;
 
             if (mIsWideText == false) {
                 const DrawingsText& text_drawing = GetText(mIDEditable);
@@ -545,6 +606,7 @@ namespace Orbis {
                 font_size        = text_drawing.mFontSize;
                 fill_color       = text_drawing.mFillColor;
                 drawing_position = text_drawing.mPosition;
+                text_align       = text_drawing.mAlign;
             }
             else {
                 const DrawingsWText& text_drawing = GetWText(mIDEditable);
@@ -553,22 +615,59 @@ namespace Orbis {
                 font_size        = text_drawing.mFontSize;
                 fill_color       = text_drawing.mFillColor;
                 drawing_position = text_drawing.mPosition;
+                text_align       = text_drawing.mAlign;
             }
 
             sf::Vector2f text_pos = pos_global + drawing_position;
 
-            text_pos.x += mPadding - mScrollOffset;
+            if (text_align == TextAlign::LeftTop || text_align == TextAlign::LeftCenter || text_align == TextAlign::LeftBottom) {
+                text_pos.x += mPadding - mScrollOffset;
+            }
 
             if (mText.isEmpty() == true && mState != TextboxState::Focused) {
                 if (mPlaceholder.isEmpty() == false) {
-                    sf::Text placeholder_text(*font, mPlaceholder, font_size);
+                    sf::Text      placeholder_text(*font, mPlaceholder, font_size);
+                    sf::FloatRect bounds = placeholder_text.getLocalBounds();
+                    sf::Vector2f  offset = {0, 0};
 
-                    placeholder_text.setPosition(text_pos);
+                    if (text_align == TextAlign::CenterTop || text_align == TextAlign::Center || text_align == TextAlign::CenterBottom) {
+                        offset.x = -(bounds.size.x) / 2.0f;
+                    }
+                    else if (text_align == TextAlign::RightTop || text_align == TextAlign::RightCenter || text_align == TextAlign::RightBottom) {
+                        offset.x = -(bounds.size.x);
+                    }
+
+                    if (text_align == TextAlign::LeftCenter || text_align == TextAlign::Center || text_align == TextAlign::RightCenter) {
+                        offset.y = -(static_cast<float>(font_size)) / 2.0f;
+                    }
+                    else if (text_align == TextAlign::LeftBottom || text_align == TextAlign::CenterBottom || text_align == TextAlign::RightBottom) {
+                        offset.y = -(static_cast<float>(font_size));
+                    }
+
+                    placeholder_text.setPosition(text_pos + offset);
                     placeholder_text.setFillColor(sf::Color(150, 150, 150, 255));
                     window.draw(placeholder_text);
                 }
 
                 return;
+            }
+
+            sf::Text      display_text = sf::Text(*font, mText, font_size);
+            sf::FloatRect bounds       = display_text.getLocalBounds();
+            sf::Vector2f  offset       = {0, 0};
+
+            if (text_align == TextAlign::CenterTop || text_align == TextAlign::Center || text_align == TextAlign::CenterBottom) {
+                offset.x = -(bounds.size.x) / 2.0f;
+            }
+            else if (text_align == TextAlign::RightTop || text_align == TextAlign::RightCenter || text_align == TextAlign::RightBottom) {
+                offset.x = -(bounds.size.x);
+            }
+
+            if (text_align == TextAlign::LeftCenter || text_align == TextAlign::Center || text_align == TextAlign::RightCenter) {
+                offset.y = -(static_cast<float>(font_size)) / 2.0f;
+            }
+            else if (text_align == TextAlign::LeftBottom || text_align == TextAlign::CenterBottom || text_align == TextAlign::RightBottom) {
+                offset.y = -(static_cast<float>(font_size));
             }
 
             if (mSelectionStart != mSelectionEnd && mState == TextboxState::Focused) {
@@ -580,22 +679,20 @@ namespace Orbis {
                 float              sel_width        = selected.getLocalBounds().size.x;
                 sf::RectangleShape highlight        = sf::RectangleShape({sel_width, static_cast<float>(font_size)});
 
-                highlight.setPosition({text_pos.x + before_width, text_pos.y});
+                highlight.setPosition({text_pos.x + offset.x + before_width, text_pos.y + offset.y});
                 highlight.setFillColor(sf::Color(100, 150, 255, 128));
                 window.draw(highlight);
             }
 
-            sf::Text display_text = sf::Text(*font, mText, font_size);
-
-            display_text.setPosition(text_pos);
+            display_text.setPosition(text_pos + offset);
             display_text.setFillColor(fill_color);
             window.draw(display_text);
 
             if (mState == TextboxState::Focused && mIsCursorVisible == true) {
-                float              cursor_x = text_pos.x + GetCursorPosX();
+                float              cursor_x = text_pos.x + offset.x + GetCursorPosX();
                 sf::RectangleShape cursor   = sf::RectangleShape({2.0f, static_cast<float>(font_size)});
 
-                cursor.setPosition({cursor_x, text_pos.y});
+                cursor.setPosition({cursor_x, text_pos.y + offset.y});
                 cursor.setFillColor(fill_color);
                 window.draw(cursor);
             }

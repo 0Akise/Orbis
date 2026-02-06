@@ -96,8 +96,6 @@ namespace Orbis {
             return *this;
         }
 
-        Panel& Register(UIContext& context);
-
         void Update(const Controls& controls) {
             if (mIsVisible == false) {
                 return;
@@ -178,8 +176,6 @@ namespace Orbis {
             return *this;
         }
 
-        Scene& Register(UIContext& context);
-
         void Update(const Controls& controls) {
             if (mIsActive == false) {
                 return;
@@ -200,6 +196,8 @@ namespace Orbis {
                 panel->Render(window);
             }
         }
+
+        Scene& Register(UIContext& context);
     };
 
     /*
@@ -396,6 +394,13 @@ namespace Orbis {
         }
 
         template <typename U = WT>
+        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetPadding(float padding) {
+            static_cast<TextboxSingle*>(mWidget.get())->SetPadding(padding);
+
+            return *this;
+        }
+
+        template <typename U = WT>
         std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnTextChanged(std::function<void(const sf::String&)> callback) {
             static_cast<TextboxSingle*>(mWidget.get())->SetOnTextChanged(callback);
 
@@ -509,8 +514,6 @@ namespace Orbis {
 
             return *this;
         }
-
-        PanelHandle& Register(UIContext& context);
     };
 
     class SceneHandle {
@@ -719,7 +722,10 @@ namespace Orbis {
             Keyboard& keyboard = iter_kb->second;
 
             if (const auto* text_entered = event.getIf<sf::Event::TextEntered>()) {
-                keyboard.mTextEntered += text_entered->unicode;
+                // Backspace=8, Tab=9, Enter=13, Delete=127
+                if (32 <= text_entered->unicode && text_entered->unicode != 127) {
+                    keyboard.mTextEntered += text_entered->unicode;
+                }
             }
             else if (const auto* key_pressed = event.getIf<sf::Event::KeyPressed>()) {
                 keyboard.mKeysPressed.push_back(key_pressed->code);
@@ -840,18 +846,6 @@ namespace Orbis {
             context->Render(window);
         }
     };
-
-    inline Panel& Panel::Register(UIContext& context) {
-        context.AddPanel(shared_from_this());
-
-        return *this;
-    }
-
-    inline PanelHandle& PanelHandle::Register(UIContext& context) {
-        mPanel->Register(context);
-
-        return *this;
-    }
 
     inline Scene& Scene::Register(UIContext& context) {
         if (mIsRegistered == true) {
