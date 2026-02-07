@@ -203,6 +203,18 @@ namespace Orbis {
     /*
     // API Handlers (Widget, Panel, Scene)
     */
+    template <typename T>
+    concept IsCanvas = std::is_same_v<T, Canvas>;
+
+    template <typename T>
+    concept IsButton = std::is_same_v<T, Button>;
+
+    template <typename T>
+    concept IsSlider = std::is_same_v<T, Slider>;
+
+    template <typename T>
+    concept IsTextboxSingle = std::is_same_v<T, TextboxSingle>;
+
     template <typename WT>
     class WidgetHandle {
     private:
@@ -274,155 +286,133 @@ namespace Orbis {
         }
 
         // Button
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetOnButtonPressed(std::function<void()> callback) {
+        WidgetHandle& SetOnButtonPressed(std::function<void()> callback) requires IsButton<WT> {
             static_cast<Button*>(mWidget.get())->SetOnButtonPressed(callback);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Button>, WidgetHandle&> SetStateColor(ButtonState state, sf::Color color) {
+        WidgetHandle& SetStateColor(ButtonState state, sf::Color color) requires IsButton<WT> {
             static_cast<Button*>(mWidget.get())->SetStateColor(state, color);
 
             return *this;
         }
 
         // Slider
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, float> GetValue() const {
+        float GetValue() const requires IsSlider<WT> {
             return static_cast<const Slider*>(mWidget.get())->GetValue();
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetRange(float min, float max) {
+        WidgetHandle& SetRange(float min, float max) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetRange(min, max);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetValue(float value) {
+        WidgetHandle& SetValue(float value) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetValue(value);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetStepSize(float step) {
+        WidgetHandle& SetStepSize(float step) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetStepSize(step);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetOrientation(bool horizontal) {
+        WidgetHandle& SetOrientation(bool horizontal) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetOrientation(horizontal);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetOnValueChanged(std::function<void(float)> callback) {
+        WidgetHandle& SetOnValueChanged(std::function<void(float)> callback) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetOnValueChanged(callback);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetTrackSize(sf::Vector2f size) {
+        WidgetHandle& SetTrackSize(sf::Vector2f size) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetTrackSize(size);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetTrackColor(sf::Color color) {
+        WidgetHandle& SetTrackColor(sf::Color color) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetTrackColor(color);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetFillColor(sf::Color color) {
+        WidgetHandle& SetFillColor(sf::Color color) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetFillColor(color);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetHandleSize(sf::Vector2f size) {
+        WidgetHandle& SetHandleSize(sf::Vector2f size) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetHandleSize(size);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, Slider>, WidgetHandle&> SetHandleColor(SliderState state, sf::Color color) {
+        WidgetHandle& SetHandleColor(SliderState state, sf::Color color) requires IsSlider<WT> {
             static_cast<Slider*>(mWidget.get())->SetHandleColor(state, color);
 
             return *this;
         }
 
         // TextboxSingle
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetPlaceholder(std::string placeholder) {
+        WidgetHandle& SetPlaceholder(std::string placeholder) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetPlaceholder(placeholder);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetPlaceholderW(std::wstring placeholder_w) {
+        WidgetHandle& SetPlaceholderW(std::wstring placeholder_w) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetPlaceholder(placeholder_w);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetEditableText(const std::string& text_id) {
+        WidgetHandle& SetEditableText(const std::string& text_id) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetEditableText(text_id);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetEditableWText(const std::string& wtext_id) {
+        WidgetHandle& SetEditableWText(const std::string& wtext_id) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetEditableWText(wtext_id);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetPadding(float padding) {
+        WidgetHandle& SetPadding(float padding) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetPadding(padding);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnTextChanged(std::function<void(const sf::String&)> callback) {
+        WidgetHandle& SetOnTextChanged(std::function<void(const sf::String&)> callback) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetOnTextChanged(callback);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> SetOnEnterPressed(std::function<void()> callback) {
+        WidgetHandle& SetOnEnterPressed(std::function<void()> callback) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetOnEnterPressed(callback);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> BindInt(int* value_ptr, int min_value = INT_MIN, int max_value = INT_MAX) {
+        WidgetHandle& BindInt(int* value_ptr, int min_value = INT_MIN, int max_value = INT_MAX) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->BindInt(value_ptr, min_value, max_value);
 
             return *this;
         }
 
-        template <typename U = WT>
-        std::enable_if_t<std::is_same_v<U, TextboxSingle>, WidgetHandle&> BindFloat(float* value_ptr, float min_value = -FLT_MAX, float max_value = FLT_MAX) {
+        WidgetHandle& BindFloat(float* value_ptr, float min_value = -FLT_MAX, float max_value = FLT_MAX) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->BindFloat(value_ptr, min_value, max_value);
 
             return *this;

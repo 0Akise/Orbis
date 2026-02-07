@@ -48,6 +48,7 @@ BreakConstructorInitializers: AfterColon
 BreakBeforeBinaryOperators: None
 BreakInheritanceList: AfterColon
 BreakStringLiterals: true
+RequiresClausePosition: SingleLine
 
 # Initializers & arguments
 BinPackArguments: false
