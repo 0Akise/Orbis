@@ -10,6 +10,7 @@ namespace Orbis {
     class TextboxSingle : public Widget {
     private:
         std::function<void(const sf::String&)> mOnTextChanged;
+        std::function<void(const sf::String&)> mOnRawTextChanged;
         std::function<void()>                  mOnEnterPressed;
 
         sf::String  mText        = "";
@@ -295,7 +296,7 @@ namespace Orbis {
         }
 
         TextboxSingle& SetOnTextChanged(std::function<void(const sf::String&)> callback) {
-            mOnTextChanged = std::move(callback);
+            mOnRawTextChanged = std::move(callback);
 
             return *this;
         }
@@ -359,8 +360,7 @@ namespace Orbis {
                     }
 
                     int clamped = std::max(min_value, std::min(max_value, parsed));
-
-                    *value_ptr = clamped;
+                    *value_ptr  = clamped;
 
                     if (clamped != parsed) {
                         mText      = std::to_string(clamped);
@@ -368,6 +368,10 @@ namespace Orbis {
 
                         UpdateDrawingText(mText);
                         UpdateScrollOffset();
+                    }
+
+                    if (mOnRawTextChanged) {
+                        mOnRawTextChanged(text);
                     }
                 } catch (const std::invalid_argument&) {
                     return;
@@ -385,6 +389,10 @@ namespace Orbis {
 
                     UpdateDrawingText(mText);
                     UpdateScrollOffset();
+
+                    if (mOnRawTextChanged) {
+                        mOnRawTextChanged(text);
+                    }
                 }
             };
 
@@ -562,13 +570,12 @@ namespace Orbis {
                     }
                 }
 
-                if (controls.mKeyboard.mIsCPressed == true &&
-                    controls.mKeyboard.IsKeyPressed(sf::Keyboard::Key::A) == true) {
+                if (controls.mKeyboard.mIsCPressed == true && controls.mKeyboard.IsKeyPressed(sf::Keyboard::Key::A) == true) {
                     mSelectionStart = 0;
                     mSelectionEnd   = mText.getSize();
                 }
 
-                // TODO: Ctrl+C, Ctrl+V, Ctrl+X (clipboard operations)
+                // TODO: Ctrl+C, Ctrl+V, Ctrl+X
 
                 auto  now     = std::chrono::steady_clock::now();
                 float elapsed = std::chrono::duration<float>(now - mCursorLastBlink).count();

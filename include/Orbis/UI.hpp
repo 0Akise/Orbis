@@ -36,6 +36,24 @@ namespace Orbis {
         bool         mIsVisible = true;
 
         std::vector<std::shared_ptr<Widget>> mWidgets;
+        std::optional<AnimationState>        mPosAnimation;
+
+        void UpdateAnimation() {
+            if (mPosAnimation.has_value() == true) {
+                if (mPosAnimation->IsComplete() == true) {
+                    mPosition = mPosAnimation->mTargetPos;
+
+                    if (mPosAnimation->mOnComplete) {
+                        mPosAnimation->mOnComplete();
+                    }
+
+                    mPosAnimation.reset();
+                }
+                else {
+                    mPosition = mPosAnimation->GetCurrentPosition();
+                }
+            }
+        }
 
     public:
         Panel() = default;
@@ -96,7 +114,20 @@ namespace Orbis {
             return *this;
         }
 
+        Panel& PositionAnimation(sf::Vector2f target, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            if (mPosAnimation.has_value() == false) {
+                mPosAnimation = AnimationState();
+            }
+
+            mPosAnimation->Start(mPosition, target, duration, std::move(on_complete));
+            mPosAnimation->SetEasing(easing);
+
+            return *this;
+        }
+
         void Update(const Controls& controls) {
+            UpdateAnimation();
+
             if (mIsVisible == false) {
                 return;
             }
@@ -181,18 +212,37 @@ namespace Orbis {
                 return;
             }
 
+            std::vector<std::pair<size_t, std::shared_ptr<Panel>>> sorted_panels;
+
             for (auto& panel : mPanels) {
+                sorted_panels.push_back({panel->GetZLevel(), panel});
+            }
+
+            std::sort(sorted_panels.begin(), sorted_panels.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            for (const auto& [zlevel, panel] : sorted_panels) {
                 panel->Update(controls);
             }
         }
 
         void Render(sf::RenderWindow& window) {
             if (mIsActive == false) {
-
                 return;
             }
 
+            std::vector<std::pair<size_t, std::shared_ptr<Panel>>> sorted_panels;
+
             for (auto& panel : mPanels) {
+                sorted_panels.push_back({panel->GetZLevel(), panel});
+            }
+
+            std::sort(sorted_panels.begin(), sorted_panels.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            for (const auto& [zlevel, panel] : sorted_panels) {
                 panel->Render(window);
             }
         }
@@ -501,6 +551,12 @@ namespace Orbis {
         template <typename WT>
         PanelHandle& AddWidget(const WidgetHandle<WT>& widget_handle) {
             mPanel->AddWidget(widget_handle.GetShared());
+
+            return *this;
+        }
+
+        PanelHandle& PositionAnimation(sf::Vector2f target, float duration, std::function<void()> on_complete = nullptr, std::function<float(float)> easing = Anim::EaseOutQuad) {
+            mPanel->PositionAnimation(target, duration, std::move(on_complete), easing);
 
             return *this;
         }
@@ -842,7 +898,7 @@ namespace Orbis {
             throw std::runtime_error("Scene already registered to a context. unlike Panels, Scenes are not shareable across multiple contexts.");
         }
 
-        context.AddScene(shared_from_this()); // TODO
+        context.AddScene(shared_from_this());
 
         mIsRegistered = true;
 
