@@ -275,6 +275,14 @@ namespace Orbis {
     public:
         TextboxSingle() = default;
 
+        bool IsContentEmpty() const {
+            return mText.isEmpty();
+        }
+
+        const sf::String& GetTextContent() const {
+            return mText;
+        }
+
         DrawingsText& GetText(const std::string& id) const {
             auto iter = mDrawingsText.find(id);
 
@@ -335,6 +343,21 @@ namespace Orbis {
 
         TextboxSingle& SetPadding(float padding) {
             mPadding = padding;
+
+            return *this;
+        }
+
+        TextboxSingle& SetText(const sf::String& text) {
+            mText           = text;
+            mCursorPos      = text.getSize();
+            mSelectionStart = mSelectionEnd = 0;
+
+            UpdateDrawingText(mText);
+            UpdateScrollOffset();
+
+            if (mOnTextChanged) {
+                mOnTextChanged(mText);
+            }
 
             return *this;
         }
@@ -449,6 +472,10 @@ namespace Orbis {
             };
 
             return *this;
+        }
+
+        TextboxSingle& ClearText() {
+            return SetText("");
         }
 
         std::shared_ptr<Widget> CloneImpl() const override {

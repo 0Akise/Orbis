@@ -414,6 +414,14 @@ namespace Orbis {
         }
 
         // TextboxSingle
+        bool IsContentEmpty() const requires IsTextboxSingle<WT> {
+            return static_cast<const TextboxSingle*>(mWidget.get())->IsContentEmpty();
+        }
+
+        const sf::String& GetTextContent() const requires IsTextboxSingle<WT> {
+            return static_cast<const TextboxSingle*>(mWidget.get())->GetTextContent();
+        }
+
         WidgetHandle& SetPlaceholder(std::string placeholder) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetPlaceholder(placeholder);
 
@@ -440,6 +448,18 @@ namespace Orbis {
 
         WidgetHandle& SetPadding(float padding) requires IsTextboxSingle<WT> {
             static_cast<TextboxSingle*>(mWidget.get())->SetPadding(padding);
+
+            return *this;
+        }
+
+        WidgetHandle& SetText(const sf::String& text) requires IsTextboxSingle<WT> {
+            static_cast<TextboxSingle*>(mWidget.get())->SetText(text);
+
+            return *this;
+        }
+
+        WidgetHandle& ClearText() requires IsTextboxSingle<WT> {
+            static_cast<TextboxSingle*>(mWidget.get())->ClearText();
 
             return *this;
         }
